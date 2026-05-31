@@ -3,6 +3,7 @@ export default {
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
+    // Re-trigger tailwind build
   ],
   theme: {
     extend: {
