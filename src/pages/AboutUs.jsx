@@ -263,13 +263,13 @@ const AboutUs = () => {
             <div className="grid grid-cols-1 lg:grid-cols-5 h-full">
               <div className="lg:col-span-2 relative h-80 lg:h-auto">
                 <img 
-                  src="https://images.unsplash.com/photo-1560250097-0b93528c311a?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" 
+                  src="./siddhartha_principal.jpeg" 
                   alt="Principal" 
                   className="absolute inset-0 w-full h-full object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent lg:hidden"></div>
                 <div className="absolute bottom-6 left-6 lg:hidden text-white">
-                  <h4 className="text-xl font-bold font-poppins">Dr. Ramana Rao</h4>
+                  <h4 className="text-xl font-bold font-poppins">Dr. Adari Jaya sankar</h4>
                   <p className="text-white/80 text-sm">Principal, Siddhartha EduHub</p>
                 </div>
               </div>
@@ -289,7 +289,7 @@ const AboutUs = () => {
                   </p>
                 </div>
                 <div className="hidden lg:block">
-                  <h4 className="text-lg font-bold font-poppins text-edu-navy">Dr. Ramana Rao</h4>
+                  <h4 className="text-lg font-bold font-poppins text-edu-navy">Mr. Adari Jaya Sankar</h4>
                   <p className="text-gray-500 text-sm">Principal, Siddhartha EduHub</p>
                 </div>
               </div>

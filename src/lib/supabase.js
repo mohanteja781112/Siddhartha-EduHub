@@ -12,7 +12,10 @@ export const loginStudent = async (username, password) => {
   try {
     // We map 'username' (which is actually Roll No) to an email format for Supabase Auth
     // E.g. '1001' becomes '1001@siddhartha.edu', 'admin' becomes 'admin@siddhartha.edu'
-    const email = `${username.toLowerCase()}@siddhartha.edu`;
+    // If the user already types the full email (e.g., 'teacher2@siddhartha.edu'), we use it as is.
+    const email = username.includes('@') 
+      ? username.toLowerCase() 
+      : `${username.toLowerCase()}@siddhartha.edu`;
     
     const { data, error } = await supabase.auth.signInWithPassword({
       email: email,

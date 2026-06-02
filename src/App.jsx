@@ -9,6 +9,7 @@ import Admission from './pages/Admission';
 import Login from './pages/Login';
 import StudentDashboard from './pages/StudentDashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import TeacherDashboard from './pages/TeacherDashboard';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -34,6 +35,7 @@ function App() {
             <Route path="/admission" element={<Admission />} />
             <Route path="/login" element={<Login />} />
             <Route path="/student-dashboard" element={<StudentDashboard />} />
+            <Route path="/teacher-dashboard" element={<TeacherDashboard />} />
             <Route path="/admin" element={<AdminDashboard />} />
           </Routes>
         </div>

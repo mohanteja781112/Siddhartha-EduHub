@@ -7,7 +7,9 @@ import { loginStudent } from '../lib/supabase';
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const isServerAdmin = new URLSearchParams(location.search).get('role') === 'admin';
+  const role = new URLSearchParams(location.search).get('role');
+  const isServerAdmin = role === 'admin';
+  const isTeacher = role === 'teacher';
 
   const [username, setUsername] = useState(isServerAdmin ? 'admin' : '');
   const [password, setPassword] = useState('');
@@ -35,8 +37,12 @@ const Login = () => {
 
       // Authenticate against Supabase Auth (we will append @siddhartha.edu in the supabase.js wrapper)
       await loginStudent(username, password);
-      // Success - redirect to dashboard
-      navigate('/student-dashboard');
+      // Success - redirect to correct dashboard
+      if (isTeacher) {
+        navigate('/teacher-dashboard');
+      } else {
+        navigate('/student-dashboard');
+      }
     } catch (err) {
       setError(err.message || 'Failed to login. Please check your credentials and ensure Supabase is configured.');
     } finally {
@@ -61,10 +67,10 @@ const Login = () => {
         <div className="text-center">
           <img src="/logo.png" alt="Siddhartha EduHub" className="mx-auto h-16 w-auto" />
           <h2 className="mt-6 text-3xl font-poppins font-bold text-edu-navy">
-            {isServerAdmin ? 'Admin Portal' : 'Student Portal'}
+            {isServerAdmin ? 'Admin Portal' : isTeacher ? 'Teacher Portal' : 'Student Portal'}
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            {isServerAdmin ? 'Sign in with your admin credentials' : 'Sign in to access your dashboard'}
+            {isServerAdmin ? 'Sign in with your admin credentials' : isTeacher ? 'Sign in with your teacher credentials' : 'Sign in to access your dashboard'}
           </p>
         </div>
         
@@ -84,7 +90,7 @@ const Login = () => {
           <div className="space-y-5">
             <div className="relative">
               <label className="text-sm font-semibold text-edu-navy mb-1.5 block">
-                {isServerAdmin ? 'Admin Username' : 'Roll Number'}
+                {isServerAdmin ? 'Admin Username' : isTeacher ? 'Teacher Email/Username' : 'Roll Number'}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -136,7 +142,7 @@ const Login = () => {
                 </div>
               ) : (
                 <span className="flex items-center gap-2">
-                  {isServerAdmin ? 'Admin Login' : 'Student Login'}
+                  {isServerAdmin ? 'Admin Login' : isTeacher ? 'Teacher Login' : 'Student Login'}
                   <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                 </span>
               )}

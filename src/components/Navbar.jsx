@@ -1,12 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, LogOut } from 'lucide-react';
+import { logoutStudent } from '../lib/supabase';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logoutStudent();
+    navigate('/login?role=teacher');
+  };
+
+  const isTeacherPortal = location.pathname.includes('/teacher-dashboard');
 
   useEffect(() => {
     const handleScroll = () => {
@@ -20,6 +29,7 @@ const Navbar = () => {
     { name: 'Home', href: '/' },
     { name: 'About Us', href: '/about' },
     { name: 'Contact Us', href: '/contact' },
+    { name: 'Teacher Portal', href: '/teacher-dashboard' },
   ];
 
   return (
@@ -46,22 +56,26 @@ const Navbar = () => {
               <Link
                 key={link.name}
                 to={link.href}
-                className={`${isActive ? 'text-edu-blue' : 'text-edu-navy'} hover:text-edu-blue font-medium transition-colors duration-200 relative group`}
+                className={`${isActive ? 'text-edu-blue' : 'text-edu-navy'} hover:text-edu-blue text-base font-medium transition-colors duration-200 relative group`}
               >
                 {link.name}
                 <span className={`absolute left-0 -bottom-1 h-0.5 bg-edu-gold transition-all duration-300 ${isActive ? 'w-full' : 'w-0 group-hover:w-full'}`}></span>
               </Link>
             )})}
-            <Link to="/login">
-              <button className="text-edu-navy font-bold hover:text-edu-blue transition-colors duration-200">
-                Student Portal
+            {isTeacherPortal ? (
+              <button 
+                onClick={handleLogout}
+                className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white text-base px-6 py-2.5 rounded-full font-bold transition-all duration-300 shadow-md hover:-translate-y-0.5"
+              >
+                <LogOut size={18} /> Logout
               </button>
-            </Link>
-            <Link to="/admission">
-              <button className="bg-gradient-to-r from-edu-gold to-yellow-500 text-white px-6 py-2.5 rounded-full font-bold hover:shadow-lg hover:shadow-edu-gold/50 transition-all duration-300 shadow-md shadow-edu-gold/30 hover:-translate-y-0.5">
-                Apply Now
-              </button>
-            </Link>
+            ) : (
+              <Link to="/admission">
+                <button className="bg-gradient-to-r from-edu-gold to-yellow-500 text-white text-base px-6 py-2.5 rounded-full font-bold hover:shadow-lg hover:shadow-edu-gold/50 transition-all duration-300 shadow-md shadow-edu-gold/30 hover:-translate-y-0.5">
+                  Apply Now
+                </button>
+              </Link>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -91,23 +105,27 @@ const Navbar = () => {
               <Link
                 key={link.name}
                 to={link.href}
-                className={`${isActive ? 'text-edu-blue bg-edu-blue/5' : 'text-edu-navy'} hover:text-edu-blue hover:bg-white/50 block px-3 py-2 rounded-md font-medium transition-colors`}
+                className={`${isActive ? 'text-edu-blue bg-edu-blue/5' : 'text-edu-navy'} hover:text-edu-blue hover:bg-white/50 block px-3 py-2 rounded-md text-base font-medium transition-colors`}
                 onClick={() => setMobileMenuOpen(false)}
               >
                 {link.name}
               </Link>
             )})}
             <div className="border-t border-gray-100 mt-2 pt-4 space-y-3">
-              <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
-                <button className="w-full bg-blue-50 text-edu-navy px-5 py-3 rounded-xl font-bold hover:bg-blue-100 transition-colors shadow-sm">
-                  Student Portal
+              {isTeacherPortal ? (
+                <button 
+                  onClick={() => { setMobileMenuOpen(false); handleLogout(); }}
+                  className="w-full flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white text-base px-5 py-3 rounded-xl font-bold transition-all duration-300 shadow-md"
+                >
+                  <LogOut size={20} /> Logout
                 </button>
-              </Link>
-              <Link to="/admission" onClick={() => setMobileMenuOpen(false)}>
-                <button className="w-full bg-gradient-to-r from-edu-gold to-yellow-500 text-white px-5 py-3 rounded-xl font-bold hover:shadow-lg hover:shadow-edu-gold/50 transition-all duration-300 shadow-md shadow-edu-gold/30">
-                  Apply Now
-                </button>
-              </Link>
+              ) : (
+                <Link to="/admission" onClick={() => setMobileMenuOpen(false)}>
+                  <button className="w-full bg-gradient-to-r from-edu-gold to-yellow-500 text-white text-base px-5 py-3 rounded-xl font-bold hover:shadow-lg hover:shadow-edu-gold/50 transition-all duration-300 shadow-md shadow-edu-gold/30">
+                    Apply Now
+                  </button>
+                </Link>
+              )}
             </div>
           </div>
         </motion.div>
