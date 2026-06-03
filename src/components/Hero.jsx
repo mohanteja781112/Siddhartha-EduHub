@@ -105,7 +105,7 @@ const Hero = () => {
             <motion.button 
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="w-full flex items-center justify-center px-8 py-4 glassmorphism text-edu-navy font-semibold rounded-full hover:bg-white/90 border border-edu-navy/20 hover:border-edu-navy/40 transition-all duration-300"
+              className="w-full flex items-center justify-center px-8 py-4 bg-white text-edu-navy font-bold rounded-full border-2 border-edu-blue/30 hover:border-edu-blue shadow-[0_8px_20px_rgba(7,42,64,0.1)] hover:shadow-[0_15px_30px_rgba(7,42,64,0.15)] hover:bg-blue-50/50 transition-all duration-300"
             >
               Student Login
             </motion.button>

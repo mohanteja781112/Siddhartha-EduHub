@@ -92,3 +92,95 @@ export const adminBulkInsertStudents = async (studentsArray) => {
     throw error;
   }
 };
+
+// --- Fees Management Helper Functions ---
+
+export const recordFeePayment = async (studentId, amount, currentPending) => {
+  try {
+    // 1. Insert payment record
+    const { error: insertError } = await supabase
+      .from('fee_payments')
+      .insert([{ student_id: studentId, amount: amount }]);
+
+    if (insertError) throw insertError;
+
+    // 2. Update student pending fees
+    const newPending = Math.max(0, currentPending - amount);
+    const { error: updateError } = await supabase
+      .from('students')
+      .update({ pending_fees: newPending })
+      .eq('id', studentId);
+
+    if (updateError) throw updateError;
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error recording fee payment:', error.message);
+    throw error;
+  }
+};
+
+export const getStudentPayments = async (studentId) => {
+  try {
+    const { data, error } = await supabase
+      .from('fee_payments')
+      .select('*')
+      .eq('student_id', studentId)
+      .order('payment_date', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching payments:', error.message);
+    throw error;
+  }
+};
+
+export const getAdminFeesData = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('students')
+      .select('id, full_name, roll_number, class, section, total_fees, pending_fees')
+      .order('class', { ascending: true })
+      .order('roll_number', { ascending: true });
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching admin fees data:', error.message);
+    throw error;
+  }
+};
+
+// --- RBAC Profile Management ---
+
+export const getAllProfiles = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .order('email', { ascending: true });
+    
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching profiles:', error.message);
+    throw error;
+  }
+};
+
+export const updateProfileRole = async (profileId, newRole) => {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({ role: newRole })
+      .eq('id', profileId)
+      .select();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error updating profile role:', error.message);
+    throw error;
+  }
+};

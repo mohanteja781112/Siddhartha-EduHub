@@ -7,7 +7,7 @@ import {
   Award, TrendingUp, Clock, Bell, MapPin, Mail, Phone,
   FileText, CheckCircle, AlertCircle, ChevronRight, ChevronLeft, Timer
 } from 'lucide-react';
-import { getStudentSession, getStudentDashboardData, logoutStudent, supabase } from '../lib/supabase';
+import { getStudentSession, getStudentDashboardData, getStudentPayments, logoutStudent, supabase } from '../lib/supabase';
 
 const DashboardCard = ({ title, value, icon: Icon, color, delay }) => (
   <motion.div 
@@ -33,8 +33,9 @@ const StudentDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   
-  // Exams State
-  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'exams', 'take_exam'
+  // Exams & Fees State
+  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'exams', 'take_exam', 'fees'
+  const [feePayments, setFeePayments] = useState([]);
   const [availableExams, setAvailableExams] = useState([]);
   const [pastResults, setPastResults] = useState([]);
   
@@ -56,6 +57,9 @@ const StudentDashboard = () => {
           setProfile(authData.profile);
           setMarks(authData.marks);
           fetchExamsData(authData.profile.class, authData.profile.id);
+          
+          const payments = await getStudentPayments(authData.profile.id);
+          setFeePayments(payments);
         } else {
           setError('Not authenticated');
           navigate('/login');
@@ -211,6 +215,12 @@ const StudentDashboard = () => {
             >
               Weekly Exams
             </button>
+            <button 
+              onClick={() => setActiveTab('fees')}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${activeTab === 'fees' ? 'bg-white text-edu-navy shadow' : 'text-white hover:bg-white/20'}`}
+            >
+              Fees
+            </button>
           </div>
 
           <div className="flex items-center gap-4">
@@ -242,6 +252,12 @@ const StudentDashboard = () => {
             className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${activeTab === 'exams' || activeTab === 'take_exam' ? 'bg-white text-edu-navy shadow' : 'text-white hover:bg-white/20'}`}
           >
             Exams
+          </button>
+          <button 
+            onClick={() => setActiveTab('fees')}
+            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${activeTab === 'fees' ? 'bg-white text-edu-navy shadow' : 'text-white hover:bg-white/20'}`}
+          >
+            Fees
           </button>
         </div>
       </div>
@@ -467,6 +483,59 @@ const StudentDashboard = () => {
               ))}
             </div>
 
+          </div>
+        )}
+
+        {/* FEES VIEW */}
+        {activeTab === 'fees' && (
+          <div className="space-y-8">
+            <h2 className="text-2xl font-bold text-edu-navy">Fees & Payments</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center">
+                <p className="text-sm font-semibold text-gray-500 mb-1">Total Fees</p>
+                <h3 className="text-3xl font-bold text-edu-navy">₹{(profile?.total_fees || 0).toLocaleString()}</h3>
+              </div>
+              <div className="bg-white rounded-3xl p-6 shadow-sm border border-green-100 flex flex-col items-center justify-center text-center">
+                <p className="text-sm font-semibold text-gray-500 mb-1">Paid Amount</p>
+                <h3 className="text-3xl font-bold text-green-600">₹{((profile?.total_fees || 0) - (profile?.pending_fees || 0)).toLocaleString()}</h3>
+              </div>
+              <div className="bg-white rounded-3xl p-6 shadow-sm border border-red-100 flex flex-col items-center justify-center text-center">
+                <p className="text-sm font-semibold text-gray-500 mb-1">Pending Dues</p>
+                <h3 className="text-3xl font-bold text-red-500">₹{(profile?.pending_fees || 0).toLocaleString()}</h3>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+              <h3 className="text-lg font-bold text-edu-navy mb-4 flex items-center gap-2">
+                <CreditCard className="text-edu-gold" size={20} /> Payment History
+              </h3>
+              
+              {feePayments.length === 0 ? (
+                <p className="text-gray-500 text-sm text-center py-8">No payments recorded yet.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-gray-50 text-gray-400 text-xs uppercase tracking-wider">
+                        <th className="p-4 font-semibold border-b rounded-tl-xl">Transaction ID</th>
+                        <th className="p-4 font-semibold border-b">Date & Time</th>
+                        <th className="p-4 font-semibold border-b text-right rounded-tr-xl">Amount Paid</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {feePayments.map(payment => (
+                        <tr key={payment.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="p-4 font-mono text-xs text-gray-500">{payment.id.split('-')[0].toUpperCase()}</td>
+                          <td className="p-4 text-sm text-gray-600">{new Date(payment.payment_date).toLocaleString()}</td>
+                          <td className="p-4 text-right font-bold text-green-600">₹{payment.amount.toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
         )}
 

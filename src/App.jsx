@@ -21,6 +21,14 @@ function ScrollToTop() {
   return null;
 }
 
+function ConditionalFooter() {
+  const location = useLocation();
+  if (location.pathname === '/teacher-dashboard') {
+    return null;
+  }
+  return <Footer />;
+}
+
 function App() {
   return (
     <Router>
@@ -39,7 +47,7 @@ function App() {
             <Route path="/admin" element={<AdminDashboard />} />
           </Routes>
         </div>
-        <Footer />
+        <ConditionalFooter />
       </div>
     </Router>
   );
