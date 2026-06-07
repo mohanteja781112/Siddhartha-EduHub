@@ -5,7 +5,7 @@ import {
   LogOut, User, BookOpen, GraduationCap, 
   CreditCard, Calendar as CalendarIcon, 
   Award, TrendingUp, Clock, Bell, MapPin, Mail, Phone,
-  FileText, CheckCircle, AlertCircle, ChevronRight, ChevronLeft, Timer
+  FileText, CheckCircle, AlertCircle, ChevronRight, ChevronLeft, Timer, Book, Lightbulb
 } from 'lucide-react';
 import { getStudentSession, getStudentDashboardData, getStudentPayments, logoutStudent, supabase } from '../lib/supabase';
 
@@ -14,14 +14,14 @@ const DashboardCard = ({ title, value, icon: Icon, color, delay }) => (
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ delay, duration: 0.5 }}
-    className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 shadow-lg border border-white/50 flex items-center gap-5"
+    className="glass-card rounded-[2rem] p-8 shadow-apple transition-all duration-300 hover:-translate-y-1 flex items-center gap-6"
   >
-    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow-md bg-gradient-to-br ${color}`}>
-      <Icon size={26} />
+    <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-white shadow-md bg-gradient-to-br ${color}`}>
+      <Icon size={30} />
     </div>
     <div>
-      <p className="text-sm font-semibold text-gray-500 mb-1">{title}</p>
-      <h3 className="text-2xl font-bold text-edu-navy">{value}</h3>
+      <p className="text-sm font-bold text-gray-500 mb-1">{title}</p>
+      <h3 className="text-3xl font-bold text-gray-900 font-outfit">{value}</h3>
     </div>
   </motion.div>
 );
@@ -32,6 +32,7 @@ const StudentDashboard = () => {
   const [marks, setMarks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [activeTerm, setActiveTerm] = useState('FA1');
   
   // Exams & Fees State
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'exams', 'take_exam', 'fees'
@@ -62,12 +63,12 @@ const StudentDashboard = () => {
           setFeePayments(payments);
         } else {
           setError('Not authenticated');
-          navigate('/login');
+          navigate('/login', { replace: true });
         }
       } catch (err) {
         console.error("Dashboard error:", err);
         setError('Failed to load dashboard data');
-        navigate('/login');
+        navigate('/login', { replace: true });
       }
       setIsLoading(false);
     };
@@ -76,11 +77,22 @@ const StudentDashboard = () => {
   }, [navigate]);
 
   const fetchExamsData = async (studentClass, studentId) => {
-    // Fetch available exams
+    // Standardize the class formats to handle both 'III' and '3'
+    const romanToArabic = {
+      'I': '1', 'II': '2', 'III': '3', 'IV': '4', 'V': '5',
+      'VI': '6', 'VII': '7', 'VIII': '8', 'IX': '9', 'X': '10'
+    };
+    
+    // Create an array of possible matching class names
+    const arabicClass = romanToArabic[studentClass?.toUpperCase()] || studentClass;
+    const romanClass = Object.keys(romanToArabic).find(key => romanToArabic[key] === String(studentClass)) || studentClass;
+    const searchClasses = [...new Set([String(studentClass), arabicClass, romanClass])];
+
+    // Fetch available exams matching any of the formats
     const { data: examsData } = await supabase
       .from('exams')
       .select('*')
-      .eq('class', studentClass)
+      .in('class', searchClasses)
       .eq('is_active', true);
       
     // Fetch past results
@@ -186,83 +198,61 @@ const StudentDashboard = () => {
     );
   }
 
-  const attendancePercentage = profile?.attendance_percentage || 0;
-  const strokeDasharray = 2 * Math.PI * 38;
-  const strokeDashoffset = strokeDasharray - (strokeDasharray * attendancePercentage) / 100;
-
   return (
-    <div className="min-h-screen bg-[#F3F4F6] font-sans pb-12">
-      
-      {/* Top Navbar */}
-      <nav className="bg-edu-navy text-white px-6 py-4 sticky top-0 z-50 shadow-md">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="Logo" className="h-8 w-auto bg-white rounded-full p-1" />
-            <h1 className="font-poppins font-bold text-lg hidden sm:block">Siddhartha EduHub | Student Portal</h1>
-          </div>
-          
-          {/* Navigation Tabs */}
-          <div className="hidden md:flex bg-white/10 p-1 rounded-xl">
-            <button 
-              onClick={() => setActiveTab('dashboard')}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${activeTab === 'dashboard' ? 'bg-white text-edu-navy shadow' : 'text-white hover:bg-white/20'}`}
-            >
-              Dashboard
-            </button>
-            <button 
-              onClick={() => setActiveTab('exams')}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${activeTab === 'exams' || activeTab === 'take_exam' ? 'bg-white text-edu-navy shadow' : 'text-white hover:bg-white/20'}`}
-            >
-              Weekly Exams
-            </button>
-            <button 
-              onClick={() => setActiveTab('fees')}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${activeTab === 'fees' ? 'bg-white text-edu-navy shadow' : 'text-white hover:bg-white/20'}`}
-            >
-              Fees
-            </button>
-          </div>
+    <div className="min-h-screen bg-[#f8fbff] font-sans pb-12 relative overflow-hidden">
+      {/* Background Floating Elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <motion.div 
+          animate={{ y: [0, -20, 0], opacity: [0.05, 0.08, 0.05] }} transition={{ repeat: Infinity, duration: 8, ease: "easeInOut" }}
+          className="absolute top-20 left-10 text-edu-blue"
+        >
+          <GraduationCap size={120} />
+        </motion.div>
+        <motion.div 
+          animate={{ y: [0, 30, 0], opacity: [0.03, 0.06, 0.03] }} transition={{ repeat: Infinity, duration: 10, ease: "easeInOut", delay: 1 }}
+          className="absolute top-60 right-20 text-edu-navy"
+        >
+          <Book size={150} />
+        </motion.div>
+        <motion.div 
+          animate={{ y: [0, -15, 0], opacity: [0.04, 0.07, 0.04], rotate: [0, 5, 0] }} transition={{ repeat: Infinity, duration: 9, ease: "easeInOut", delay: 2 }}
+          className="absolute bottom-20 left-40 text-edu-gold"
+        >
+          <Award size={100} />
+        </motion.div>
+        <motion.div 
+          animate={{ y: [0, 25, 0], opacity: [0.03, 0.05, 0.03], rotate: [0, -5, 0] }} transition={{ repeat: Infinity, duration: 12, ease: "easeInOut", delay: 3 }}
+          className="absolute top-40 right-1/3 text-edu-blue"
+        >
+          <Lightbulb size={80} />
+        </motion.div>
+      </div>
 
-          <div className="flex items-center gap-4">
-            <div className="text-right hidden sm:block">
-              <p className="text-sm font-bold">{profile?.full_name}</p>
-              <p className="text-xs text-blue-200">Class {profile?.class} - {profile?.section}</p>
-            </div>
-            <button 
-              onClick={handleLogout}
-              className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors shadow-md"
-            >
-              <LogOut size={16} /> <span className="hidden sm:inline">Logout</span>
-            </button>
-          </div>
-        </div>
-      </nav>
-
-      {/* Mobile Navigation Tabs (visible only on small screens) */}
-      <div className="md:hidden bg-edu-navy px-4 pb-4">
-        <div className="flex bg-white/10 p-1 rounded-xl w-full">
+      {/* Navigation Tabs */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 mb-8 flex justify-center relative z-10">
+        <div className="flex flex-wrap justify-center bg-white/60 backdrop-blur-md p-1.5 rounded-2xl border border-white/60 shadow-sm gap-2">
           <button 
             onClick={() => setActiveTab('dashboard')}
-            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${activeTab === 'dashboard' ? 'bg-white text-edu-navy shadow' : 'text-white hover:bg-white/20'}`}
+            className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'dashboard' ? 'bg-gradient-to-r from-edu-navy to-blue-900 text-white shadow-premium' : 'text-gray-600 hover:text-edu-navy hover:bg-white hover:shadow-apple border border-transparent hover:border-white'}`}
           >
             Dashboard
           </button>
           <button 
             onClick={() => setActiveTab('exams')}
-            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${activeTab === 'exams' || activeTab === 'take_exam' ? 'bg-white text-edu-navy shadow' : 'text-white hover:bg-white/20'}`}
+            className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'exams' || activeTab === 'take_exam' ? 'bg-gradient-to-r from-edu-navy to-blue-900 text-white shadow-premium' : 'text-gray-600 hover:text-edu-navy hover:bg-white hover:shadow-apple border border-transparent hover:border-white'}`}
           >
             Exams
           </button>
           <button 
             onClick={() => setActiveTab('fees')}
-            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${activeTab === 'fees' ? 'bg-white text-edu-navy shadow' : 'text-white hover:bg-white/20'}`}
+            className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'fees' ? 'bg-gradient-to-r from-edu-navy to-blue-900 text-white shadow-premium' : 'text-gray-600 hover:text-edu-navy hover:bg-white hover:shadow-apple border border-transparent hover:border-white'}`}
           >
             Fees
           </button>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-0 relative z-10">
         
         {/* DASHBOARD VIEW */}
         {activeTab === 'dashboard' && (
@@ -271,35 +261,54 @@ const StudentDashboard = () => {
             <div className="space-y-8">
               <motion.div 
                 initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
-                className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 relative overflow-hidden"
+                className="glass-card rounded-[2rem] p-8 relative overflow-hidden text-center flex flex-col items-center"
               >
-                <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-r from-edu-navy to-blue-800"></div>
+                <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-r from-edu-navy via-[#1e4b78] to-edu-blue opacity-90"></div>
                 <div className="relative z-10 flex flex-col items-center mt-6">
                   <img 
-                    src={profile?.student_photo || 'https://via.placeholder.com/150'} 
+                    src={profile?.student_photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile?.full_name || 'Student')}&background=0f172a&color=fff&size=150&bold=true`} 
                     alt="Student Profile" 
                     className="w-28 h-28 rounded-full border-4 border-white shadow-lg object-cover bg-white"
                   />
                   <h2 className="mt-4 text-2xl font-bold text-edu-navy">{profile?.full_name}</h2>
                   <div className="flex items-center gap-2 mt-1 mb-6 px-3 py-1 bg-blue-50 text-edu-blue rounded-full text-sm font-semibold">
-                    <GraduationCap size={16} /> Class {profile?.class} - {profile?.section}
+                    <GraduationCap size={16} /> Class {profile?.class}{profile?.section ? ` - ${profile.section}` : ''}
                   </div>
-                  {/* Info lines ... omitted for brevity in draft, wait I need to include them so it's not broken */}
                   <div className="w-full space-y-4 text-sm">
-                    <div className="flex items-center gap-3 text-gray-600"><div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center shrink-0"><User size={16} className="text-edu-gold" /></div><div><p className="text-xs text-gray-400">Roll Number</p><p className="font-semibold text-edu-navy">{profile?.roll_number}</p></div></div>
-                  </div>
-                </div>
-              </motion.div>
+                    <div className="flex items-center gap-3 text-gray-600">
+                      <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center shrink-0">
+                        <User size={16} className="text-edu-gold" />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-xs text-gray-400">Roll Number</p>
+                        <p className="font-semibold text-edu-navy">{profile?.roll_number}</p>
+                      </div>
+                    </div>
 
-              <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
-                <h3 className="text-lg font-bold text-edu-navy mb-6 flex items-center gap-2"><CalendarIcon className="text-edu-gold" size={20} /> Attendance</h3>
-                <div className="flex items-center justify-between">
-                  <div className="relative w-32 h-32 flex items-center justify-center">
-                    <svg className="w-full h-full transform -rotate-90">
-                      <circle cx="64" cy="64" r="38" className="stroke-gray-100" strokeWidth="8" fill="none" />
-                      <motion.circle initial={{ strokeDashoffset: strokeDasharray }} animate={{ strokeDashoffset }} transition={{ duration: 1.5, ease: "easeOut" }} cx="64" cy="64" r="38" className={`${attendancePercentage >= 75 ? 'stroke-green-500' : 'stroke-orange-500'}`} strokeWidth="8" fill="none" strokeDasharray={strokeDasharray} strokeLinecap="round" />
-                    </svg>
-                    <div className="absolute text-center"><span className="text-2xl font-bold text-edu-navy">{attendancePercentage}%</span></div>
+                    <div className="flex items-center gap-3 text-gray-600">
+                      <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center shrink-0">
+                        <User size={16} className="text-edu-gold" />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-xs text-gray-400">Parent Name</p>
+                        <p className="font-semibold text-edu-navy">{profile?.parent_name || 'N/A'}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 text-gray-600">
+                      <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center shrink-0">
+                        <CalendarIcon size={16} className="text-edu-gold" />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-xs text-gray-400">Date of Birth</p>
+                        <p className="font-semibold text-edu-navy">
+                          {profile?.dob ? (() => {
+                            const d = new Date(profile.dob);
+                            return `${d.getDate().toString().padStart(2, '0')}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getFullYear()}`;
+                          })() : 'N/A'}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </motion.div>
@@ -312,13 +321,43 @@ const StudentDashboard = () => {
                 <DashboardCard title="Current Rank" value="Top 15%" icon={Award} color="from-edu-gold to-yellow-500" delay={0.2} />
               </div>
 
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="p-6 border-b border-gray-100 bg-gray-50/50"><h3 className="text-lg font-bold text-edu-navy flex items-center gap-2"><BookOpen className="text-edu-gold" size={20} /> Academic Records</h3></div>
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="glass-card rounded-[2rem] overflow-hidden">
+                <div className="p-8 border-b border-white/50 bg-white/30 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <h3 className="text-xl font-bold text-gray-900 font-outfit flex items-center gap-2">
+                    <BookOpen className="text-edu-gold" size={22} /> Academic Records
+                  </h3>
+                  {marks.length > 0 && (
+                    <div className="flex gap-2 flex-wrap">
+                      {Array.from(new Set(marks.map(m => m.term || 'FA1'))).map(term => (
+                        <button
+                          key={term}
+                          onClick={() => setActiveTerm(term)}
+                          className={`px-4 py-1.5 rounded-full text-sm font-bold transition-colors ${
+                            (activeTerm === term || (!activeTerm && term === 'FA1'))
+                              ? 'bg-edu-navy text-white' 
+                              : 'bg-white/60 text-gray-600 hover:bg-white'
+                          }`}
+                        >
+                          {term}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <div className="overflow-x-auto p-4">
                   <table className="w-full text-left border-collapse">
-                    <thead><tr className="bg-gray-50 text-gray-400 text-xs uppercase tracking-wider"><th className="p-3">Subject</th><th className="p-3">Marks</th></tr></thead>
+                    <thead><tr className="bg-gray-50/50 text-gray-500 text-xs uppercase tracking-wider"><th className="p-4 font-bold">Subject</th><th className="p-4 font-bold text-right">Marks</th></tr></thead>
                     <tbody>
-                      {marks.map(mark => <tr key={mark.id} className="border-b border-gray-50"><td className="p-3 font-medium">{mark.subject}</td><td className="p-3">{mark.marks}</td></tr>)}
+                      {marks.filter(m => (m.term || 'FA1') === (activeTerm || 'FA1')).length > 0 ? (
+                        marks.filter(m => (m.term || 'FA1') === (activeTerm || 'FA1')).map(mark => (
+                          <tr key={mark.id} className="border-b border-gray-100/50 hover:bg-white/50 transition-colors">
+                            <td className="p-4 font-bold text-gray-800">{mark.subject}</td>
+                            <td className="p-4 font-semibold text-edu-blue text-right">{mark.marks}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr><td colSpan="2" className="p-4 text-center text-gray-500">No marks available for this term.</td></tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -330,27 +369,27 @@ const StudentDashboard = () => {
         {/* EXAMS VIEW */}
         {activeTab === 'exams' && (
           <div className="space-y-8">
-            <h2 className="text-2xl font-bold text-edu-navy">Weekly Exams</h2>
+            <h2 className="text-3xl font-bold text-gray-900 font-outfit">Exams Center</h2>
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Available Exams */}
-              <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
-                <h3 className="text-lg font-bold text-edu-navy mb-4 flex items-center gap-2">
-                  <FileText className="text-edu-blue" size={20} /> Pending Exams
+              <div className="glass-card rounded-[2rem] p-8">
+                <h3 className="text-xl font-bold text-gray-900 font-outfit mb-6 flex items-center gap-2">
+                  <FileText className="text-edu-blue" size={24} /> Pending Exams
                 </h3>
                 <div className="space-y-4">
                   {availableExams.length === 0 ? (
-                    <p className="text-gray-500 text-sm">No pending exams at the moment. Great job!</p>
+                    <p className="text-gray-500 font-medium">No pending exams at the moment. Great job!</p>
                   ) : (
                     availableExams.map(exam => (
-                      <div key={exam.id} className="p-4 border border-blue-100 bg-blue-50/50 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                      <div key={exam.id} className="p-5 border border-blue-100 bg-blue-50/50 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
                         <div>
-                          <h4 className="font-bold text-edu-navy">{exam.title}</h4>
-                          <p className="text-sm text-gray-600">{exam.subject} • {exam.time_limit_minutes} mins</p>
+                          <h4 className="font-bold text-gray-900 text-lg">{exam.title}</h4>
+                          <p className="text-sm font-semibold text-edu-blue">{exam.subject} • {exam.time_limit_minutes} mins</p>
                         </div>
                         <button 
                           onClick={() => startExam(exam)}
-                          className="w-full sm:w-auto bg-edu-blue text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-sm"
+                          className="w-full sm:w-auto bg-gradient-to-r from-edu-navy to-blue-900 text-white px-6 py-2.5 rounded-xl font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
                         >
                           Start Exam
                         </button>
@@ -361,22 +400,22 @@ const StudentDashboard = () => {
               </div>
 
               {/* Past Results */}
-              <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
-                <h3 className="text-lg font-bold text-edu-navy mb-4 flex items-center gap-2">
-                  <CheckCircle className="text-green-500" size={20} /> Past Results
+              <div className="glass-card rounded-[2rem] p-8">
+                <h3 className="text-xl font-bold text-gray-900 font-outfit mb-6 flex items-center gap-2">
+                  <CheckCircle className="text-green-500" size={24} /> Past Results
                 </h3>
                 <div className="space-y-4">
                   {pastResults.length === 0 ? (
-                    <p className="text-gray-500 text-sm">You haven't completed any exams yet.</p>
+                    <p className="text-gray-500 font-medium">You haven't completed any exams yet.</p>
                   ) : (
                     pastResults.map(res => (
-                      <div key={res.id} className="p-4 border border-gray-100 bg-gray-50 rounded-xl flex justify-between items-center">
+                      <div key={res.id} className="p-5 border border-gray-100 bg-white/50 rounded-2xl flex justify-between items-center shadow-sm hover:shadow-md transition-shadow">
                         <div>
-                          <h4 className="font-bold text-edu-navy">{res.exams?.title || 'Exam'}</h4>
-                          <p className="text-xs text-gray-500">{new Date(res.submitted_at).toLocaleDateString()}</p>
+                          <h4 className="font-bold text-gray-900 text-lg">{res.exams?.title || 'Exam'}</h4>
+                          <p className="text-xs font-semibold text-gray-500">{new Date(res.submitted_at).toLocaleDateString()}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-lg font-bold text-edu-blue">{res.total_marks_obtained} <span className="text-sm text-gray-400">/ {res.total_marks}</span></p>
+                          <p className="text-xl font-outfit font-bold text-edu-blue">{res.total_marks_obtained} <span className="text-sm text-gray-400">/ {res.total_marks}</span></p>
                         </div>
                       </div>
                     ))
@@ -489,46 +528,46 @@ const StudentDashboard = () => {
         {/* FEES VIEW */}
         {activeTab === 'fees' && (
           <div className="space-y-8">
-            <h2 className="text-2xl font-bold text-edu-navy">Fees & Payments</h2>
+            <h2 className="text-3xl font-bold text-gray-900 font-outfit">Fees & Payments</h2>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center">
-                <p className="text-sm font-semibold text-gray-500 mb-1">Total Fees</p>
-                <h3 className="text-3xl font-bold text-edu-navy">₹{(profile?.total_fees || 0).toLocaleString()}</h3>
+              <div className="glass-card rounded-[2rem] p-8 flex flex-col items-center justify-center text-center shadow-sm">
+                <p className="text-sm font-bold text-gray-500 mb-2">Total Fees</p>
+                <h3 className="text-4xl font-bold text-gray-900 font-outfit">₹{(profile?.total_fees || 0).toLocaleString()}</h3>
               </div>
-              <div className="bg-white rounded-3xl p-6 shadow-sm border border-green-100 flex flex-col items-center justify-center text-center">
-                <p className="text-sm font-semibold text-gray-500 mb-1">Paid Amount</p>
-                <h3 className="text-3xl font-bold text-green-600">₹{((profile?.total_fees || 0) - (profile?.pending_fees || 0)).toLocaleString()}</h3>
+              <div className="glass-card rounded-[2rem] p-8 flex flex-col items-center justify-center text-center shadow-sm border-green-200">
+                <p className="text-sm font-bold text-gray-500 mb-2">Paid Amount</p>
+                <h3 className="text-4xl font-bold text-green-600 font-outfit">₹{((profile?.total_fees || 0) - (profile?.pending_fees || 0)).toLocaleString()}</h3>
               </div>
-              <div className="bg-white rounded-3xl p-6 shadow-sm border border-red-100 flex flex-col items-center justify-center text-center">
-                <p className="text-sm font-semibold text-gray-500 mb-1">Pending Dues</p>
-                <h3 className="text-3xl font-bold text-red-500">₹{(profile?.pending_fees || 0).toLocaleString()}</h3>
+              <div className="glass-card rounded-[2rem] p-8 flex flex-col items-center justify-center text-center shadow-sm border-red-200">
+                <p className="text-sm font-bold text-gray-500 mb-2">Pending Dues</p>
+                <h3 className="text-4xl font-bold text-red-500 font-outfit">₹{(profile?.pending_fees || 0).toLocaleString()}</h3>
               </div>
             </div>
 
-            <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
-              <h3 className="text-lg font-bold text-edu-navy mb-4 flex items-center gap-2">
-                <CreditCard className="text-edu-gold" size={20} /> Payment History
+            <div className="glass-card rounded-[2rem] p-8">
+              <h3 className="text-xl font-bold text-gray-900 font-outfit mb-6 flex items-center gap-2">
+                <CreditCard className="text-edu-gold" size={24} /> Payment History
               </h3>
               
               {feePayments.length === 0 ? (
-                <p className="text-gray-500 text-sm text-center py-8">No payments recorded yet.</p>
+                <p className="text-gray-500 font-medium text-center py-8">No payments recorded yet.</p>
               ) : (
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto rounded-2xl border border-gray-100/50 bg-white/50 backdrop-blur-sm">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="bg-gray-50 text-gray-400 text-xs uppercase tracking-wider">
-                        <th className="p-4 font-semibold border-b rounded-tl-xl">Transaction ID</th>
-                        <th className="p-4 font-semibold border-b">Date & Time</th>
-                        <th className="p-4 font-semibold border-b text-right rounded-tr-xl">Amount Paid</th>
+                      <tr className="bg-gray-50/80 text-gray-500 text-xs uppercase tracking-wider">
+                        <th className="p-5 font-bold border-b border-gray-100">Transaction ID</th>
+                        <th className="p-5 font-bold border-b border-gray-100">Date & Time</th>
+                        <th className="p-5 font-bold border-b border-gray-100 text-right">Amount Paid</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
                       {feePayments.map(payment => (
-                        <tr key={payment.id} className="hover:bg-gray-50 transition-colors">
-                          <td className="p-4 font-mono text-xs text-gray-500">{payment.id.split('-')[0].toUpperCase()}</td>
-                          <td className="p-4 text-sm text-gray-600">{new Date(payment.payment_date).toLocaleString()}</td>
-                          <td className="p-4 text-right font-bold text-green-600">₹{payment.amount.toLocaleString()}</td>
+                        <tr key={payment.id} className="hover:bg-white transition-colors">
+                          <td className="p-5 font-mono text-xs font-semibold text-gray-600">{payment.id.split('-')[0].toUpperCase()}</td>
+                          <td className="p-5 text-sm font-medium text-gray-700">{new Date(payment.payment_date).toLocaleString()}</td>
+                          <td className="p-5 text-right font-bold text-green-600 text-lg">₹{payment.amount.toLocaleString()}</td>
                         </tr>
                       ))}
                     </tbody>

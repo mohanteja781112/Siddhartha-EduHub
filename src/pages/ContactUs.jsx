@@ -51,17 +51,52 @@ const ContactUs = () => {
     message: ''
   });
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleFormSubmit = (e) => {
+  const handleFormSubmit = async (e) => {
     e.preventDefault();
-    const { name, email, phone, subject, message } = formData;
+    setIsSubmitting(true);
     
-    const emailBody = `Name: ${name}%0AEmail: ${email}%0APhone: ${phone}%0A%0AMessage:%0A${message}`;
-    window.location.href = `mailto:siddhardhaetechnoschool@gmail.com?subject=${encodeURIComponent(subject || 'New Inquiry from Website')}&body=${emailBody}`;
+    try {
+      const response = await fetch("https://formsubmit.co/ajax/siddhardhaetechnoschool@gmail.com", {
+        method: "POST",
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          _subject: formData.subject || "New Inquiry from Website",
+          _template: "table",
+          "Name": formData.name,
+          "Email Address": formData.email,
+          "Phone Number": formData.phone || "N/A",
+          "Subject": formData.subject || "N/A",
+          "Message": formData.message
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.success === "true" || data.success === true) {
+        setIsSuccess(true);
+        // Reset form
+        setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
+        setTimeout(() => setIsSuccess(false), 5000);
+      } else {
+        alert("Failed to submit form. Please try again.");
+      }
+    } catch (error) {
+      console.error("Form submission error:", error);
+      alert("An error occurred while sending the message. Please try again later.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -224,13 +259,28 @@ const ContactUs = () => {
               </div>
               <motion.button 
                 type="submit"
+                disabled={isSubmitting}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="w-full py-4 bg-gradient-to-r from-edu-navy to-blue-900 text-white font-semibold rounded-xl shadow-lg shadow-blue-900/20 hover:shadow-blue-900/40 flex items-center justify-center gap-2 transition-all"
+                className="w-full py-4 bg-gradient-to-r from-edu-navy to-blue-900 text-white font-semibold rounded-xl shadow-lg shadow-blue-900/20 hover:shadow-blue-900/40 flex items-center justify-center gap-2 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                <Send size={20} />
-                Send Message
+                {isSubmitting ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send size={20} />
+                    Send Message
+                  </>
+                )}
               </motion.button>
+              {isSuccess && (
+                <div className="p-4 bg-green-50 text-green-700 rounded-xl border border-green-200 text-center font-medium">
+                  Your message has been sent successfully! We'll get back to you soon.
+                </div>
+              )}
             </form>
           </motion.div>
 

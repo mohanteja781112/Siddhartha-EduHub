@@ -24,12 +24,14 @@ dist-ssr
 *.sln
 *.sw?
 
+scripts/
 test_supabase.js
 supabase_setup.sql
 import_auth.js
 students.csv
+students_credentials.csv
 students_credentials_export.csv
-exam_setup.sql
+students_original.csv
 
 # Environment variables
 .env

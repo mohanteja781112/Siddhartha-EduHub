@@ -23,7 +23,8 @@ function ScrollToTop() {
 
 function ConditionalFooter() {
   const location = useLocation();
-  if (location.pathname === '/teacher-dashboard') {
+  const hiddenPaths = ['/teacher-dashboard', '/student-dashboard', '/admin'];
+  if (hiddenPaths.includes(location.pathname)) {
     return null;
   }
   return <Footer />;

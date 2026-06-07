@@ -3,8 +3,15 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://placeholder-url.supabase.co';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder-key';
 
-// Initialize Supabase client
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Initialize Supabase client with explicit persistence settings
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    storage: window.localStorage
+  }
+});
 
 // --- Database Helper Functions ---
 
@@ -93,6 +100,24 @@ export const adminBulkInsertStudents = async (studentsArray) => {
   }
 };
 
+export const adminBulkInsertMarks = async (marksArray) => {
+  try {
+    const { data, error } = await supabase
+      .from('student_marks')
+      .insert(marksArray)
+      .select();
+
+    if (error) {
+      throw error;
+    }
+
+    return { success: true, count: data?.length || 0, data };
+  } catch (error) {
+    console.error('Error in bulk insert marks:', error.message);
+    throw error;
+  }
+};
+
 // --- Fees Management Helper Functions ---
 
 export const recordFeePayment = async (studentId, amount, currentPending) => {
@@ -152,6 +177,22 @@ export const getAdminFeesData = async () => {
   }
 };
 
+export const getAllStudentsInfo = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('students')
+      .select('*')
+      .order('class', { ascending: true })
+      .order('roll_number', { ascending: true });
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching all students info:', error.message);
+    throw error;
+  }
+};
+
 // --- RBAC Profile Management ---
 
 export const getAllProfiles = async () => {
@@ -181,6 +222,22 @@ export const updateProfileRole = async (profileId, newRole) => {
     return data;
   } catch (error) {
     console.error('Error updating profile role:', error.message);
+    throw error;
+  }
+};
+
+export const toggleProfileStatus = async (profileId, isActive) => {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({ is_active: isActive })
+      .eq('id', profileId)
+      .select();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error toggling profile status:', error.message);
     throw error;
   }
 };

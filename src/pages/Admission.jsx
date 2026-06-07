@@ -138,12 +138,51 @@ const Admission = () => {
 
     setIsSubmitting(true);
     
-    // Simulate API call
-    console.log("Submitting Admission Enquiry Data to Supabase:", formData);
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    setIsSubmitting(false);
-    setIsSuccess(true);
+    try {
+      const response = await fetch("https://formsubmit.co/ajax/siddhardhaetechnoschool@gmail.com", {
+        method: "POST",
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          _subject: `New Admission Enquiry: ${formData.studentName}`,
+          _template: "table",
+          "Student Name": formData.studentName,
+          "Date of Birth": formData.dob,
+          "Gender": formData.gender,
+          "Current Class": formData.currentClass,
+          "Applying For": formData.applyingFor,
+          "Current School": formData.currentSchool || "N/A",
+          "Parent Name": formData.parentName,
+          "Relationship": formData.relationship,
+          "Phone Number": formData.phone,
+          "Alternate Phone": formData.altPhone || "N/A",
+          "Email Address": formData.email,
+          "Occupation": formData.occupation || "N/A",
+          "Address Line 1": formData.address1,
+          "Address Line 2": formData.address2 || "N/A",
+          "City": formData.city,
+          "State": formData.state,
+          "Pincode": formData.pincode,
+          "How did they hear about us?": formData.hearAbout || "N/A",
+          "Message/Notes": formData.message || "N/A"
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.success === "true" || data.success === true) {
+        setIsSuccess(true);
+      } else {
+        alert("Failed to submit form. Please try again.");
+      }
+    } catch (error) {
+      console.error("Form submission error:", error);
+      alert("An error occurred while sending the email. Please try again later.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

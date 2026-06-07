@@ -1,24 +1,40 @@
-import React, { useState, useEffect } from 'react';
-import { supabase, logoutStudent } from '../lib/supabase';
+import React, { useState, useEffect, useRef } from 'react';
+import { supabase, logoutStudent, getAllStudentsInfo, adminBulkInsertMarks } from '../lib/supabase';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { LogOut, BookOpen, FileSpreadsheet, Plus, GraduationCap, Book, Award, Lightbulb, ArrowLeft } from 'lucide-react';
+import { LogOut, BookOpen, FileSpreadsheet, Plus, GraduationCap, Book, Award, Lightbulb, ArrowLeft, Trash2, Database, UploadCloud, CheckCircle } from 'lucide-react';
+import Papa from 'papaparse';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const TeacherDashboard = () => {
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState('exams'); // 'exams' | 'marks'
   const view = searchParams.get('view') || 'list';
   const [selectedExam, setSelectedExam] = useState(null);
 
+  // Marks Upload State
+  const [file, setFile] = useState(null);
+  const [previewData, setPreviewData] = useState([]);
+  const [selectedTerm, setSelectedTerm] = useState('FA1');
+  const [isParsing, setIsParsing] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [studentsCache, setStudentsCache] = useState([]);
+  const fileInputRef = useRef(null);
+
   useEffect(() => {
     if ((view === 'questions' || view === 'results') && !selectedExam) {
-      setSearchParams({ view: 'list' });
+      setSearchParams({ view: 'list' }, { replace: true });
     }
   }, [view, selectedExam, setSearchParams]);
   
   // New Exam Form State
-  const [newExam, setNewExam] = useState({ title: '', class: '10', subject: '', time_limit_minutes: 30 });
+  const [newExam, setNewExam] = useState({ title: '', class: 'X', subject: '', time_limit_minutes: 30 });
+  
+  const toRoman = (val) => {
+    const map = { '1': 'I', '2': 'II', '3': 'III', '4': 'IV', '5': 'V', '6': 'VI', '7': 'VII', '8': 'VIII', '9': 'IX', '10': 'X' };
+    return map[String(val)] || val;
+  };
   
   // New Question Form State
   const [newQuestion, setNewQuestion] = useState({
@@ -30,6 +46,8 @@ const TeacherDashboard = () => {
   const navigate = useNavigate();
   const [isAuthChecking, setIsAuthChecking] = useState(true);
 
+  const [accessDeniedRole, setAccessDeniedRole] = useState(null);
+
   useEffect(() => {
     checkAuth();
   }, []);
@@ -37,17 +55,37 @@ const TeacherDashboard = () => {
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      navigate('/login?role=teacher');
-    } else {
-      setIsAuthChecking(false);
-      fetchExams();
+      navigate('/login?role=teacher', { replace: true });
+      return;
     }
+
+    // Verify role to prevent "leftover" student logins from accessing teacher portal
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', session.user.id)
+      .single();
+
+    if (!profile || (profile.role !== 'teacher' && profile.role !== 'admin')) {
+      setAccessDeniedRole(profile?.role || 'None/Unknown');
+      setIsAuthChecking(false);
+      return;
+    }
+
+    setIsAuthChecking(false);
+    fetchExams();
   };
 
   const handleLogout = () => {
     logoutStudent();
     navigate('/login?role=teacher');
   };
+
+  useEffect(() => {
+    if (activeTab === 'marks' && studentsCache.length === 0) {
+      getAllStudentsInfo().then(setStudentsCache);
+    }
+  }, [activeTab, studentsCache.length]);
 
   const fetchExams = async () => {
     setLoading(true);
@@ -87,7 +125,7 @@ const TeacherDashboard = () => {
       alert('Exam created successfully!');
       setSearchParams({ view: 'list' });
       fetchExams();
-      setNewExam({ title: '', class: '10', subject: '', time_limit_minutes: 30 });
+      setNewExam({ title: '', class: 'X', subject: '', time_limit_minutes: 30 });
     }
   };
 
@@ -128,6 +166,22 @@ const TeacherDashboard = () => {
     }
   };
 
+  const handleDeleteExam = async (examId) => {
+    if (!window.confirm("Are you sure you want to delete this exam? This will also delete all its questions and student results. This action cannot be undone.")) return;
+
+    // First delete questions and results to avoid foreign key errors
+    await supabase.from('questions').delete().eq('exam_id', examId);
+    await supabase.from('student_exam_results').delete().eq('exam_id', examId);
+
+    const { error } = await supabase.from('exams').delete().eq('id', examId);
+    
+    if (error) {
+      alert("Error deleting exam: " + error.message);
+    } else {
+      fetchExams();
+    }
+  };
+
   const handleAddQuestion = async (e) => {
     e.preventDefault();
     if (!selectedExam) return;
@@ -147,7 +201,7 @@ const TeacherDashboard = () => {
     }
   };
 
-  const tableContainerClass = "bg-white/80 backdrop-blur-md p-6 rounded-2xl border border-white/60 shadow-[0_10px_40px_rgba(0,0,0,0.08)] transition-all duration-300 hover:shadow-[0_15px_50px_rgba(0,0,0,0.12)]";
+  const tableContainerClass = "glass-card p-8 rounded-[2rem] shadow-apple border-white/80 transition-all duration-300";
 
   const renderExamList = () => (
     <motion.div 
@@ -156,15 +210,14 @@ const TeacherDashboard = () => {
       exit={{ opacity: 0, y: -20 }}
       className={tableContainerClass}
     >
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <h2 className="text-xl font-semibold text-gray-800">Managed Exams</h2>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+        <h2 className="text-2xl font-bold text-gray-800 font-outfit">Managed Exams</h2>
         <button 
           onClick={() => setSearchParams({ view: 'create' })}
-          className="flex items-center gap-2 bg-gradient-to-r from-edu-navy to-[#1e4b78] text-white px-5 py-2.5 rounded-xl hover:from-edu-blue hover:to-[#1e4b78] transition-all duration-300 shadow-md hover:shadow-lg hover:shadow-edu-blue/30 transform hover:scale-[1.03] active:scale-95 font-medium group relative overflow-hidden"
+          className="flex items-center gap-2 bg-gradient-to-r from-edu-navy to-blue-900 text-white px-6 py-3 rounded-xl hover:shadow-apple transition-all duration-300 shadow-premium transform hover:-translate-y-0.5 font-bold group"
         >
-          <span className="absolute inset-0 w-full h-full -mt-1 rounded-lg opacity-30 bg-gradient-to-b from-transparent via-transparent to-black"></span>
           <Plus size={18} className="group-hover:rotate-90 transition-transform duration-300" /> 
-          <span className="relative z-10">Create New Exam</span>
+          Create New Exam
         </button>
       </div>
       
@@ -197,7 +250,7 @@ const TeacherDashboard = () => {
                   className="border-b border-gray-50 even:bg-gray-50/40 hover:bg-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md group"
                 >
                   <td className="p-5 font-medium text-gray-800">{exam.title}</td>
-                  <td className="p-5 text-gray-600">Class {exam.class}</td>
+                  <td className="p-5 text-gray-600">Class {toRoman(exam.class)}</td>
                   <td className="p-5 text-gray-600">{exam.subject}</td>
                   <td className="p-5 text-gray-600">{exam.time_limit_minutes}</td>
                   <td className="p-5">
@@ -222,6 +275,13 @@ const TeacherDashboard = () => {
                     >
                       <FileSpreadsheet size={16} /> View Results
                     </button>
+                    <button 
+                      onClick={() => handleDeleteExam(exam.id)}
+                      className="flex items-center justify-center text-sm bg-white/80 backdrop-blur-sm text-red-600 border border-red-200 px-3 py-2 rounded-lg hover:bg-red-600 hover:text-white transition-all duration-300 shadow-sm hover:shadow-red-600/30 hover:-translate-y-0.5"
+                      title="Delete Exam"
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </td>
                 </motion.tr>
               ))}
@@ -240,8 +300,8 @@ const TeacherDashboard = () => {
       className={`${tableContainerClass} max-w-2xl mx-auto`}
     >
       <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
-        <h2 className="text-xl font-semibold text-gray-800">Create New Exam</h2>
-        <button onClick={() => setSearchParams({ view: 'list' })} className="flex items-center gap-1.5 bg-gradient-to-r from-edu-navy to-[#1e4b78] text-white hover:from-edu-blue hover:to-[#1e4b78] transition-all duration-300 shadow-md hover:shadow-lg hover:shadow-edu-blue/30 transform hover:-translate-y-0.5 px-4 py-2 rounded-xl text-sm font-medium"><ArrowLeft size={16} /> Cancel</button>
+        <h2 className="text-2xl font-bold text-gray-800 font-outfit">Create New Exam</h2>
+        <button onClick={() => setSearchParams({ view: 'list' })} className="flex items-center gap-1.5 bg-white text-gray-600 hover:text-edu-navy hover:bg-gray-50 transition-all duration-300 shadow-sm hover:shadow-apple border border-gray-200 hover:-translate-y-0.5 px-5 py-2.5 rounded-xl text-sm font-bold"><ArrowLeft size={16} /> Cancel</button>
       </div>
       
       <form onSubmit={handleCreateExam} className="space-y-5">
@@ -261,7 +321,7 @@ const TeacherDashboard = () => {
               className="w-full p-3 bg-gray-50/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-edu-blue focus:bg-white outline-none transition-all duration-200"
               value={newExam.class} onChange={e => setNewExam({...newExam, class: e.target.value})}
             >
-              {[1,2,3,4,5,6,7,8,9,10].map(c => <option key={c} value={c}>Class {c}</option>)}
+              {['I','II','III','IV','V','VI','VII','VIII','IX','X'].map(c => <option key={c} value={c}>Class {c}</option>)}
             </select>
           </div>
           <div>
@@ -302,7 +362,7 @@ const TeacherDashboard = () => {
         <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
           <div>
             <h2 className="text-xl font-semibold text-gray-800">Manage Questions</h2>
-            <p className="text-gray-500 text-sm mt-1">{selectedExam?.title} | Class {selectedExam?.class} | {selectedExam?.subject}</p>
+            <p className="text-gray-500 text-sm mt-1">{selectedExam?.title} | Class {toRoman(selectedExam?.class)} | {selectedExam?.subject}</p>
           </div>
           <button onClick={() => setSearchParams({ view: 'list' })} className="flex items-center gap-1.5 bg-gradient-to-r from-edu-navy to-[#1e4b78] text-white hover:from-edu-blue hover:to-[#1e4b78] transition-all duration-300 shadow-md hover:shadow-lg hover:shadow-edu-blue/30 transform hover:-translate-y-0.5 px-4 py-2 rounded-xl text-sm font-medium"><ArrowLeft size={16} /> Back to Exams</button>
         </div>
@@ -415,7 +475,7 @@ const TeacherDashboard = () => {
       <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
         <div>
           <h2 className="text-xl font-semibold text-gray-800">Exam Results</h2>
-          <p className="text-gray-500 text-sm mt-1">{selectedExam?.title} | Class {selectedExam?.class}</p>
+          <p className="text-gray-500 text-sm mt-1">{selectedExam?.title} | Class {toRoman(selectedExam?.class)}</p>
         </div>
         <button onClick={() => setSearchParams({ view: 'list' })} className="flex items-center gap-1.5 bg-gradient-to-r from-edu-navy to-[#1e4b78] text-white hover:from-edu-blue hover:to-[#1e4b78] transition-all duration-300 shadow-md hover:shadow-lg hover:shadow-edu-blue/30 transform hover:-translate-y-0.5 px-4 py-2 rounded-xl text-sm font-medium"><ArrowLeft size={16} /> Back to Exams</button>
       </div>
@@ -451,9 +511,245 @@ const TeacherDashboard = () => {
     </motion.div>
   );
 
+  const renderUploadMarks = () => (
+    <motion.div 
+      key="marks-tab"
+      initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+      className="grid grid-cols-1 lg:grid-cols-3 gap-8"
+    >
+      <div className="lg:col-span-1 space-y-6">
+        <div className="glass-card rounded-[2rem] p-8 shadow-apple">
+          <h3 className="font-bold text-edu-navy mb-4 flex items-center gap-2">
+            <Database className="text-edu-gold" size={20} /> Academic Records
+          </h3>
+          <div className="mb-4">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Select Term</label>
+            <select 
+              value={selectedTerm}
+              onChange={(e) => setSelectedTerm(e.target.value)}
+              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-edu-blue outline-none font-bold text-edu-navy"
+            >
+              <option value="FA1">FA1 (Formative Assessment 1)</option>
+              <option value="FA2">FA2 (Formative Assessment 2)</option>
+              <option value="SA1">SA1 (Summative Assessment 1)</option>
+              <option value="FA3">FA3 (Formative Assessment 3)</option>
+              <option value="FA4">FA4 (Formative Assessment 4)</option>
+              <option value="SA2">SA2 (Summative Assessment 2)</option>
+              <option value="Term 1">Term 1</option>
+              <option value="Term 2">Term 2</option>
+            </select>
+          </div>
+          
+          <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 mb-5">
+            <p className="text-sm text-gray-700 mb-2 font-semibold flex items-center gap-2"><Lightbulb size={16} className="text-edu-gold" /> Supported CSV Formats:</p>
+            <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
+              <li><span className="font-semibold text-edu-navy">Subject-wise Columns:</span> <span className="font-mono bg-white px-1 border border-gray-200 rounded">Roll Number</span>, <span className="font-mono bg-white px-1 border border-gray-200 rounded">Name</span>, <span className="font-mono bg-white px-1 border border-gray-200 rounded">English</span>, <span className="font-mono bg-white px-1 border border-gray-200 rounded">Maths</span>, <span className="font-mono bg-white px-1 border border-gray-200 rounded">Science</span></li>
+              <li><span className="font-semibold text-edu-navy">Standard List:</span> <span className="font-mono bg-white px-1 border border-gray-200 rounded">Roll Number</span>, <span className="font-mono bg-white px-1 border border-gray-200 rounded">Subject</span>, <span className="font-mono bg-white px-1 border border-gray-200 rounded">Marks</span></li>
+            </ol>
+          </div>
+          
+          <div 
+            onDragOver={e => e.preventDefault()}
+            onDrop={(e) => {
+              e.preventDefault();
+              if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                fileInputRef.current.files = e.dataTransfer.files;
+                handleMarksFileUpload({ target: { files: e.dataTransfer.files } });
+              }
+            }}
+            className={`border-2 border-dashed p-8 rounded-2xl text-center cursor-pointer transition-all ${file ? 'border-green-400 bg-green-50/50' : 'border-gray-300 hover:border-edu-gold hover:bg-white/80'}`}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <input type="file" accept=".csv" ref={fileInputRef} onChange={handleMarksFileUpload} className="hidden" />
+            {file ? (
+              <div className="flex flex-col items-center">
+                <CheckCircle className="text-green-500 mb-3" size={40} />
+                <p className="font-bold text-gray-800 text-sm">{file.name}</p>
+                <button className="mt-2 text-xs text-edu-blue hover:underline" onClick={(e) => { e.stopPropagation(); setFile(null); setPreviewData([]); }}>Remove</button>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center">
+                <UploadCloud className="text-gray-400 mb-3" size={40} />
+                <p className="font-bold text-edu-navy text-sm mb-1">Click to upload marks CSV</p>
+                <p className="text-xs text-gray-500">or drag and drop</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="lg:col-span-2">
+        <div className="glass-card rounded-[2rem] flex flex-col h-[500px] overflow-hidden shadow-apple">
+          <div className="p-6 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+            <div>
+              <h3 className="font-bold text-edu-navy text-lg">Data Preview</h3>
+              <p className="text-xs text-gray-500">{isParsing ? 'Parsing...' : previewData.length > 0 ? `${previewData.length} records found` : 'No data loaded'}</p>
+            </div>
+            {previewData.length > 0 && (
+              <button 
+                onClick={confirmMarksUpload} 
+                disabled={isUploading || studentsCache.length === 0} 
+                className="bg-gradient-to-r from-edu-navy to-blue-900 text-white px-6 py-2 rounded-xl font-bold hover:shadow-lg disabled:opacity-50 transition-all text-sm"
+              >
+                {isUploading ? 'Uploading...' : 'Save to Database'}
+              </button>
+            )}
+          </div>
+          <div className="flex-1 overflow-auto p-0">
+            {previewData.length > 0 ? (
+              <table className="w-full text-left border-collapse whitespace-nowrap">
+                <thead className="bg-white sticky top-0 shadow-sm z-10">
+                  <tr className="text-gray-400 text-xs uppercase tracking-wider">
+                    <th className="p-4 font-semibold border-b">Roll No</th>
+                    <th className="p-4 font-semibold border-b">Subject</th>
+                    <th className="p-4 font-semibold border-b">Marks</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {previewData.map((row, idx) => (
+                    <tr key={idx} className="hover:bg-gray-50">
+                      <td className="p-4 font-bold text-edu-navy">{row.roll_number}</td>
+                      <td className="p-4 text-gray-600">{row.subject}</td>
+                      <td className="p-4 font-bold text-edu-blue">{row.marks}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className="h-full flex items-center justify-center text-gray-400"><p>Waiting for data</p></div>
+            )}
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+
+  const handleMarksFileUpload = (e) => {
+    const selectedFile = e.target.files[0];
+    if (!selectedFile) return;
+    setFile(selectedFile);
+    setIsParsing(true);
+    Papa.parse(selectedFile, {
+      header: true, skipEmptyLines: true,
+      complete: (results) => {
+        const rawData = results.data;
+        if (rawData.length === 0) {
+          setIsParsing(false);
+          return;
+        }
+
+        const headers = Object.keys(rawData[0]).map(k => k.trim());
+        const hasSubject = headers.some(h => h.toLowerCase() === 'subject');
+        const hasMarks = headers.some(h => h.toLowerCase() === 'marks');
+
+        let normalizedData = [];
+
+        if (hasSubject && hasMarks) {
+           // Standard List Format
+           normalizedData = rawData.map(row => {
+             const rollKey = Object.keys(row).find(k => k.toLowerCase().replace(/[\s_]/g, '') === 'rollnumber');
+             const subjKey = Object.keys(row).find(k => k.toLowerCase() === 'subject');
+             const marksKey = Object.keys(row).find(k => k.toLowerCase() === 'marks');
+             return {
+               roll_number: row[rollKey],
+               subject: row[subjKey],
+               marks: row[marksKey]
+             };
+           });
+        } else {
+           // Subject-wise Columns Format
+           const ignoreCols = ['name', 'studentname', 'student_name', 'student', 'id', 'sno', 's.no'];
+           
+           rawData.forEach(row => {
+             const rollKey = Object.keys(row).find(k => k.toLowerCase().replace(/[\s_]/g, '') === 'rollnumber');
+             const rollNumber = row[rollKey];
+             if (!rollNumber) return;
+
+             Object.keys(row).forEach(key => {
+                const normalizedKey = key.trim();
+                const lowerKey = normalizedKey.toLowerCase().replace(/[\s_]/g, '');
+                
+                if (lowerKey !== 'rollnumber' && !ignoreCols.includes(lowerKey)) {
+                   if (row[key] && String(row[key]).trim() !== '') {
+                     normalizedData.push({
+                       roll_number: rollNumber,
+                       subject: normalizedKey,
+                       marks: row[key]
+                     });
+                   }
+                }
+             });
+           });
+        }
+
+        setPreviewData(normalizedData);
+        setIsParsing(false);
+      }
+    });
+  };
+
+  const confirmMarksUpload = async () => {
+    if (previewData.length === 0) return;
+    setIsUploading(true);
+    try {
+      const marksToInsert = [];
+      const errors = [];
+      previewData.forEach(row => {
+        const student = studentsCache.find(s => s.roll_number === row.roll_number);
+        if (student) {
+          marksToInsert.push({ student_id: student.id, subject: row.subject, marks: row.marks, term: selectedTerm });
+        } else {
+          errors.push(`Roll number ${row.roll_number} not found.`);
+        }
+      });
+      if (errors.length > 0) {
+        alert("Warnings/Errors:\n" + errors.join('\n'));
+        if (marksToInsert.length === 0) { setIsUploading(false); return; }
+        if (!window.confirm(`Found ${marksToInsert.length} valid records. Proceed?`)) { setIsUploading(false); return; }
+      }
+      await adminBulkInsertMarks(marksToInsert);
+      alert('Marks uploaded successfully!');
+      setFile(null); setPreviewData([]);
+    } catch (err) { alert("Error: " + err.message); } 
+    finally { setIsUploading(false); }
+  };
+
+  if (accessDeniedRole) {
+    return (
+      <div className="min-h-screen bg-[#FCFAF8] flex items-center justify-center px-4">
+        <div className="max-w-md w-full bg-white p-8 rounded-3xl shadow-xl text-center border border-red-100">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-red-500 text-3xl font-bold">!</span>
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
+          <p className="text-gray-600 mb-6">
+            You are currently logged in with an account that has the role: <strong className="text-red-600">'{accessDeniedRole}'</strong>. 
+            You MUST be logged in as a 'teacher' or 'admin' to access this portal.
+          </p>
+          <div className="space-y-3">
+            <button
+              onClick={() => {
+                logoutStudent();
+                navigate('/login?role=teacher');
+              }}
+              className="w-full py-3 px-4 bg-edu-navy text-white rounded-xl font-bold hover:bg-blue-900 transition-colors shadow-md"
+            >
+              Logout & Switch Account
+            </button>
+            <button
+              onClick={() => navigate(accessDeniedRole === 'student' ? '/student-dashboard' : '/login')}
+              className="w-full py-3 px-4 text-edu-navy font-semibold hover:bg-blue-50 rounded-xl transition-colors"
+            >
+              Go to My Dashboard
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen relative overflow-hidden pb-12 pt-28 bg-[#f8fbff]" style={{ background: 'linear-gradient(135deg, #f8fbff 0%, #eef6ff 50%, #ffffff 100%)' }}>
-      
+    <div className="min-h-screen relative overflow-hidden pb-12 bg-[#f8fbff]">
       {/* Background Floating Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
         <motion.div 
@@ -482,25 +778,44 @@ const TeacherDashboard = () => {
         </motion.div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 relative z-10">
         <motion.div 
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          className="mb-10 text-center sm:text-left"
+          className="mb-10 flex flex-col items-center text-center"
         >
           <div className="inline-block relative">
-            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 font-poppins">Exams Overview</h1>
-            <div className="absolute -bottom-2 left-0 w-1/2 h-1 bg-gradient-to-r from-edu-gold to-yellow-300 rounded-full"></div>
+            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 font-outfit">Teacher Portal</h1>
+            <div className="absolute -bottom-2 left-1/4 right-1/4 h-1 bg-gradient-to-r from-edu-gold to-yellow-300 rounded-full"></div>
           </div>
-          <p className="text-gray-600 mt-4 text-lg max-w-2xl">Manage exams and monitor student performance</p>
+          <p className="text-gray-500 mt-4 text-lg max-w-2xl font-medium">Manage exams, academic records, and monitor student performance</p>
         </motion.div>
 
+        {/* Navigation Tabs */}
+        <div className="flex justify-center mb-8">
+          <div className="flex flex-wrap justify-center bg-white/60 backdrop-blur-md p-1.5 rounded-2xl border border-white/60 shadow-sm gap-2">
+            <button
+              onClick={() => { setActiveTab('exams'); setSearchParams({ view: 'list' }); }}
+              className={`py-2.5 px-6 font-bold text-sm transition-all rounded-xl flex items-center gap-2.5 ${activeTab === 'exams' ? 'bg-gradient-to-r from-edu-navy to-blue-900 text-white shadow-premium' : 'text-gray-600 hover:text-edu-navy hover:bg-white hover:shadow-apple border border-transparent hover:border-white'}`}
+            >
+              <BookOpen size={18} /> Online Exams
+            </button>
+            <button
+              onClick={() => setActiveTab('marks')}
+              className={`py-2.5 px-6 font-bold text-sm transition-all rounded-xl flex items-center gap-2.5 ${activeTab === 'marks' ? 'bg-gradient-to-r from-edu-navy to-blue-900 text-white shadow-premium' : 'text-gray-600 hover:text-edu-navy hover:bg-white hover:shadow-apple border border-transparent hover:border-white'}`}
+            >
+              <Database size={18} /> Academic Records
+            </button>
+          </div>
+        </div>
+
         <AnimatePresence mode="wait">
-          {view === 'list' && <motion.div key="list">{renderExamList()}</motion.div>}
-          {view === 'create' && <motion.div key="create">{renderCreateExam()}</motion.div>}
-          {view === 'questions' && <motion.div key="questions">{renderQuestions()}</motion.div>}
-          {view === 'results' && <motion.div key="results">{renderResults()}</motion.div>}
+          {activeTab === 'marks' && renderUploadMarks()}
+          {activeTab === 'exams' && view === 'list' && <motion.div key="list">{renderExamList()}</motion.div>}
+          {activeTab === 'exams' && view === 'create' && <motion.div key="create">{renderCreateExam()}</motion.div>}
+          {activeTab === 'exams' && view === 'questions' && <motion.div key="questions">{renderQuestions()}</motion.div>}
+          {activeTab === 'exams' && view === 'results' && <motion.div key="results">{renderResults()}</motion.div>}
         </AnimatePresence>
       </div>
     </div>
