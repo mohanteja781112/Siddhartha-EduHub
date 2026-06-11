@@ -4,10 +4,10 @@ import { MapPin, Phone, Mail, ChevronDown, Send, GraduationCap, BookOpen, Award,
 import { Link } from 'react-router-dom';
 
 const SocialIcons = {
-  Facebook: (props) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>,
-  Instagram: (props) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>,
-  Youtube: (props) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"/><path d="m10 15 5-3-5-3z"/></svg>,
-  Linkedin: (props) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect width="4" height="12" x="2" y="9"/><circle cx="4" cy="4" r="2"/></svg>
+  Facebook: ({ size = 24, ...props }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>,
+  Instagram: ({ size = 24, ...props }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>,
+  Youtube: ({ size = 24, ...props }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"/><path d="m10 15 5-3-5-3z"/></svg>,
+  Linkedin: ({ size = 24, ...props }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect width="4" height="12" x="2" y="9"/><circle cx="4" cy="4" r="2"/></svg>
 };
 
 const FAQItem = ({ question, answer }) => {
@@ -45,9 +45,7 @@ const FAQItem = ({ question, answer }) => {
 const ContactUs = () => {
   const [formData, setFormData] = useState({
     name: '',
-    email: '',
     phone: '',
-    subject: '',
     message: ''
   });
 
@@ -64,19 +62,17 @@ const ContactUs = () => {
     setIsSubmitting(true);
     
     try {
-      const response = await fetch("https://formsubmit.co/ajax/siddhardhaetechnoschool@gmail.com", {
+      const response = await fetch("https://formsubmit.co/ajax/siddharthaenglishmedium2005@gmail.com", {
         method: "POST",
         headers: { 
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
         body: JSON.stringify({
-          _subject: formData.subject || "New Inquiry from Website",
+          _subject: "New Inquiry from Website",
           _template: "table",
           "Name": formData.name,
-          "Email Address": formData.email,
           "Phone Number": formData.phone || "N/A",
-          "Subject": formData.subject || "N/A",
           "Message": formData.message
         })
       });
@@ -86,7 +82,7 @@ const ContactUs = () => {
       if (data.success === "true" || data.success === true) {
         setIsSuccess(true);
         // Reset form
-        setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
+        setFormData({ name: '', phone: '', message: '' });
         setTimeout(() => setIsSuccess(false), 5000);
       } else {
         alert("Failed to submit form. Please try again.");
@@ -147,7 +143,7 @@ const ContactUs = () => {
             {
               icon: Mail,
               title: "Email Us",
-              lines: ["siddhardhaetechnoschool@gmail.com", "adarikishan16@gmail.com"]
+              lines: ["siddharthaenglishmedium2005@gmail.com", "adarikishan16@gmail.com"]
             }
           ].map((card, idx) => (
             <motion.div 
@@ -199,7 +195,7 @@ const ContactUs = () => {
                 </div>
                 <div>
                   <h4 className="font-semibold text-edu-navy mb-1">Email:</h4>
-                  <p>siddhardhaetechnoschool@gmail.com</p>
+                  <p>siddharthaenglishmedium2005@gmail.com</p>
                 </div>
                 <div>
                   <h4 className="font-semibold text-edu-navy mb-1">Working Hours:</h4>
@@ -239,18 +235,8 @@ const ContactUs = () => {
                   <input type="text" name="name" value={formData.name} onChange={handleInputChange} required className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-edu-gold focus:border-transparent transition-all bg-gray-50 focus:bg-white" placeholder="Ram" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-                  <input type="email" name="email" value={formData.email} onChange={handleInputChange} required className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-edu-gold focus:border-transparent transition-all bg-gray-50 focus:bg-white" placeholder="ram@example.com" />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
-                  <input type="tel" name="phone" value={formData.phone} onChange={handleInputChange} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-edu-gold focus:border-transparent transition-all bg-gray-50 focus:bg-white" placeholder="+91 XXXXX XXXXX" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Subject</label>
-                  <input type="text" name="subject" value={formData.subject} onChange={handleInputChange} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-edu-gold focus:border-transparent transition-all bg-gray-50 focus:bg-white" placeholder="Admission Inquiry (Optional)" />
+                  <input type="tel" name="phone" value={formData.phone} onChange={handleInputChange} required className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-edu-gold focus:border-transparent transition-all bg-gray-50 focus:bg-white" placeholder="+91 XXXXX XXXXX" />
                 </div>
               </div>
               <div>
@@ -301,7 +287,7 @@ const ContactUs = () => {
         >
           {/* Using an iframe to query the exact school location */}
           <iframe 
-            src="https://maps.google.com/maps?q=14-5-97,+sagi+subbaraju+gari+veedhi,+near+RAMRAJ+cotton,+anakapalle&t=&z=16&ie=UTF8&iwloc=&output=embed" 
+            src="https://maps.google.com/maps?q=17.687029,83.01358&t=&z=16&ie=UTF8&iwloc=&output=embed" 
             width="100%" 
             height="100%" 
             style={{ border: 0 }} 

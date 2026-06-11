@@ -81,22 +81,15 @@ const Admission = () => {
     
     // Parent Info
     parentName: '',
-    relationship: '',
+    relation: '',
     phone: '',
     altPhone: '',
-    email: '',
-    occupation: '',
     
     // Address Info
     address1: '',
-    address2: '',
     city: '',
     state: '',
-    pincode: '',
-    
-    // Additional Info
-    hearAbout: '',
-    message: ''
+    pincode: ''
   });
 
   const [errors, setErrors] = useState({});
@@ -105,7 +98,7 @@ const Admission = () => {
 
   const requiredFields = [
     'studentName', 'dob', 'gender', 'currentClass', 'applyingFor',
-    'parentName', 'relationship', 'phone', 'email',
+    'parentName', 'relation', 'phone',
     'address1', 'city', 'state', 'pincode'
   ];
 
@@ -139,7 +132,7 @@ const Admission = () => {
     setIsSubmitting(true);
     
     try {
-      const response = await fetch("https://formsubmit.co/ajax/siddhardhaetechnoschool@gmail.com", {
+      const response = await fetch("https://formsubmit.co/ajax/siddharthaenglishmedium2005@gmail.com", {
         method: "POST",
         headers: { 
           'Content-Type': 'application/json',
@@ -155,18 +148,13 @@ const Admission = () => {
           "Applying For": formData.applyingFor,
           "Current School": formData.currentSchool || "N/A",
           "Parent Name": formData.parentName,
-          "Relationship": formData.relationship,
+          "Relation": formData.relation,
           "Phone Number": formData.phone,
           "Alternate Phone": formData.altPhone || "N/A",
-          "Email Address": formData.email,
-          "Occupation": formData.occupation || "N/A",
           "Address Line 1": formData.address1,
-          "Address Line 2": formData.address2 || "N/A",
           "City": formData.city,
           "State": formData.state,
-          "Pincode": formData.pincode,
-          "How did they hear about us?": formData.hearAbout || "N/A",
-          "Message/Notes": formData.message || "N/A"
+          "Pincode": formData.pincode
         })
       });
 
@@ -175,7 +163,7 @@ const Admission = () => {
       if (data.success === "true" || data.success === true) {
         setIsSuccess(true);
       } else {
-        alert("Failed to submit form. Please try again.");
+        alert(`Failed to submit form: ${data.message || 'Please try again.'}`);
       }
     } catch (error) {
       console.error("Form submission error:", error);
@@ -231,6 +219,10 @@ const Admission = () => {
         >
           <form onSubmit={handleSubmit} className="space-y-12">
             
+            <div className="text-right text-sm text-gray-500 font-medium">
+              Fields marked with <span className="text-red-500">*</span> are required
+            </div>
+
             {/* Student Information */}
             <div>
               <h3 className="text-xl font-poppins font-bold text-edu-navy border-b-2 border-edu-gold/30 pb-3 mb-6 flex items-center gap-2">
@@ -282,8 +274,8 @@ const Admission = () => {
                   placeholder="Enter full name"
                 />
                 <SelectField 
-                  label="Relationship" name="relationship" value={formData.relationship} 
-                  onChange={handleChange} error={errors.relationship} required
+                  label="Relation" name="relation" value={formData.relation} 
+                  onChange={handleChange} error={errors.relation} required
                   options={['Father', 'Mother', 'Guardian', 'Other']}
                 />
                 <InputField 
@@ -295,16 +287,6 @@ const Admission = () => {
                   label="Alternate Phone Number" name="altPhone" type="tel" value={formData.altPhone} 
                   onChange={handleChange} icon={Phone}
                   placeholder="+91"
-                />
-                <InputField 
-                  label="Email Address" name="email" type="email" value={formData.email} 
-                  onChange={handleChange} error={errors.email} required icon={Mail}
-                  placeholder="example@email.com"
-                />
-                <InputField 
-                  label="Occupation" name="occupation" value={formData.occupation} 
-                  onChange={handleChange}
-                  placeholder="e.g. Software Engineer, Business"
                 />
               </div>
             </div>
@@ -322,13 +304,6 @@ const Admission = () => {
                     placeholder="House/Flat No., Building Name, Street"
                   />
                 </div>
-                <div className="md:col-span-2">
-                  <InputField 
-                    label="Address Line 2" name="address2" value={formData.address2} 
-                    onChange={handleChange}
-                    placeholder="Area, Landmark"
-                  />
-                </div>
                 <InputField 
                   label="City" name="city" value={formData.city} 
                   onChange={handleChange} error={errors.city} required
@@ -344,33 +319,6 @@ const Admission = () => {
                   onChange={handleChange} error={errors.pincode} required
                   placeholder="e.g. 531001"
                 />
-              </div>
-            </div>
-
-            {/* Additional Information */}
-            <div>
-              <h3 className="text-xl font-poppins font-bold text-edu-navy border-b-2 border-edu-gold/30 pb-3 mb-6 flex items-center gap-2">
-                <BookOpen className="text-edu-gold" size={24} /> Additional Information
-              </h3>
-              <div className="grid grid-cols-1 gap-6">
-                <div className="md:w-1/2">
-                  <SelectField 
-                    label="How did you hear about us?" name="hearAbout" value={formData.hearAbout} 
-                    onChange={handleChange}
-                    options={['Google', 'Facebook', 'Instagram', 'Friend/Relative', 'Newspaper', 'School Website', 'Other']}
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5 w-full">
-                  <label className="text-sm font-semibold text-edu-navy">Special Notes / Message</label>
-                  <textarea
-                    name="message"
-                    value={formData.message}
-                    onChange={handleChange}
-                    rows="4"
-                    placeholder="Any specific questions or details you'd like to share..."
-                    className="w-full bg-white/50 border border-gray-200 focus:border-edu-gold focus:ring-edu-gold/20 rounded-xl px-4 py-3 text-edu-navy placeholder:text-gray-400 focus:outline-none focus:ring-4 transition-all duration-300 resize-none"
-                  ></textarea>
-                </div>
               </div>
             </div>
 
