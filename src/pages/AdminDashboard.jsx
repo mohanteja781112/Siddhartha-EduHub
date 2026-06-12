@@ -32,6 +32,7 @@ const AdminDashboard = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStudentForPayment, setSelectedStudentForPayment] = useState(null);
   const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentType, setPaymentType] = useState('Standard');
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
   
   // --- Fee History State ---
@@ -231,10 +232,11 @@ const AdminDashboard = () => {
 
     setIsSubmittingPayment(true);
     try {
-      await recordFeePayment(selectedStudentForPayment.id, amount, selectedStudentForPayment.pending_fees);
+      await recordFeePayment(selectedStudentForPayment.id, amount, selectedStudentForPayment.pending_fees, paymentType);
       alert('Payment recorded successfully!');
       setSelectedStudentForPayment(null);
       setPaymentAmount('');
+      setPaymentType('Standard');
       fetchFeesData(); // Refresh the list
     } catch (err) {
       alert('Error recording payment: ' + err.message);
@@ -784,6 +786,18 @@ const AdminDashboard = () => {
                     placeholder="Enter amount"
                   />
                   
+                  <div className="mt-4">
+                    <label className="text-sm font-bold text-gray-700 mb-2 block">Payment Type</label>
+                    <select
+                      value={paymentType}
+                      onChange={(e) => setPaymentType(e.target.value)}
+                      className="w-full p-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-edu-blue focus:border-edu-blue outline-none text-lg font-bold text-edu-navy"
+                    >
+                      <option value="Standard">Standard Payment (Cash/Online)</option>
+                      <option value="Concession">Fee Concession / Discount</option>
+                    </select>
+                  </div>
+                  
                   <div className="mt-8 flex gap-3">
                     <button type="button" onClick={() => setSelectedStudentForPayment(null)} className="flex-1 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-colors">
                       Cancel
@@ -851,6 +865,9 @@ const AdminDashboard = () => {
                         <tr key={payment.id} className="hover:bg-gray-50 transition-colors">
                           <td className="p-4 font-mono text-xs text-gray-500">
                             {payment.id.split('-')[0].toUpperCase()}
+                            <span className={`ml-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${payment.payment_type === 'Concession' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>
+                              {payment.payment_type || 'Standard'}
+                            </span>
                             <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-600">Installment {studentPaymentHistory.length - idx}</span>
                           </td>
                           <td className="p-4 text-sm text-gray-600">{new Date(payment.payment_date).toLocaleString()}</td>

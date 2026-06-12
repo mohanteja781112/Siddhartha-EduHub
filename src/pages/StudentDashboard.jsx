@@ -328,7 +328,7 @@ const StudentDashboard = () => {
                   </h3>
                   {marks.length > 0 && (
                     <div className="flex gap-2 flex-wrap">
-                      {Array.from(new Set(marks.map(m => m.term || 'FA1'))).map(term => (
+                      {Array.from(new Set(marks.map(m => m.exam_type || 'FA1'))).map(term => (
                         <button
                           key={term}
                           onClick={() => setActiveTerm(term)}
@@ -348,11 +348,11 @@ const StudentDashboard = () => {
                   <table className="w-full text-left border-collapse">
                     <thead><tr className="bg-gray-50/50 text-gray-500 text-xs uppercase tracking-wider"><th className="p-4 font-bold">Subject</th><th className="p-4 font-bold text-right">Marks</th></tr></thead>
                     <tbody>
-                      {marks.filter(m => (m.term || 'FA1') === (activeTerm || 'FA1')).length > 0 ? (
-                        marks.filter(m => (m.term || 'FA1') === (activeTerm || 'FA1')).map(mark => (
+                      {marks.filter(m => (m.exam_type || 'FA1') === (activeTerm || 'FA1')).length > 0 ? (
+                        marks.filter(m => (m.exam_type || 'FA1') === (activeTerm || 'FA1')).map(mark => (
                           <tr key={mark.id} className="border-b border-gray-100/50 hover:bg-white/50 transition-colors">
                             <td className="p-4 font-bold text-gray-800">{mark.subject}</td>
-                            <td className="p-4 font-semibold text-edu-blue text-right">{mark.marks}</td>
+                            <td className="p-4 font-semibold text-edu-blue text-right">{mark.marks_obtained} / {mark.total_marks || 100}</td>
                           </tr>
                         ))
                       ) : (
@@ -565,7 +565,12 @@ const StudentDashboard = () => {
                     <tbody className="divide-y divide-gray-50">
                       {feePayments.map(payment => (
                         <tr key={payment.id} className="hover:bg-white transition-colors">
-                          <td className="p-5 font-mono text-xs font-semibold text-gray-600">{payment.id.split('-')[0].toUpperCase()}</td>
+                          <td className="p-5 font-mono text-xs font-semibold text-gray-600">
+                            {payment.id.split('-')[0].toUpperCase()}
+                            <span className={`ml-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${payment.payment_type === 'Concession' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>
+                              {payment.payment_type || 'Standard'}
+                            </span>
+                          </td>
                           <td className="p-5 text-sm font-medium text-gray-700">{new Date(payment.payment_date).toLocaleString()}</td>
                           <td className="p-5 text-right font-bold text-green-600 text-lg">₹{payment.amount.toLocaleString()}</td>
                         </tr>

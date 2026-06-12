@@ -129,15 +129,25 @@ const AboutUs = () => {
               initial={{ opacity: 0, x: 30 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              className="relative"
+              className="relative max-w-md mx-auto lg:ml-auto"
             >
-              <div className="absolute inset-0 bg-gradient-to-tr from-edu-navy/20 to-edu-gold/20 rounded-3xl transform translate-x-4 translate-y-4"></div>
-              <div className="relative rounded-3xl overflow-hidden shadow-2xl group border border-gray-100 bg-white p-2">
+              {/* Decorative background shadow */}
+              <div className="absolute inset-0 bg-gradient-to-tr from-edu-navy to-edu-blue rounded-[2.5rem] transform translate-x-4 translate-y-4 opacity-20 transition-transform group-hover:translate-x-6 group-hover:translate-y-6"></div>
+              
+              {/* Main image container */}
+              <div className="relative rounded-[2.5rem] overflow-hidden shadow-2xl group border-[8px] sm:border-[12px] border-white bg-gray-50">
                 <img 
-                  src="https://images.unsplash.com/photo-1523050854058-8df90110c9f1?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80" 
+                  src="./school_image.png" 
                   alt="School Campus" 
-                  className="w-full h-[400px] object-cover rounded-2xl transition-transform duration-700 group-hover:scale-105"
+                  className="w-full h-auto max-h-[700px] object-cover transition-transform duration-1000 group-hover:scale-105"
                 />
+                
+                {/* Premium gradient overlay on hover */}
+                <div className="absolute inset-0 bg-gradient-to-t from-edu-navy/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-end justify-center pb-8">
+                  <span className="text-white font-bold font-outfit tracking-wider text-lg opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500 delay-100">
+                    Siddhartha EduHub
+                  </span>
+                </div>
               </div>
             </motion.div>
           </div>

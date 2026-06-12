@@ -120,12 +120,12 @@ export const adminBulkInsertMarks = async (marksArray) => {
 
 // --- Fees Management Helper Functions ---
 
-export const recordFeePayment = async (studentId, amount, currentPending) => {
+export const recordFeePayment = async (studentId, amount, currentPending, paymentType = 'Standard') => {
   try {
     // 1. Insert payment record
     const { error: insertError } = await supabase
       .from('fee_payments')
-      .insert([{ student_id: studentId, amount: amount }]);
+      .insert([{ student_id: studentId, amount: amount, payment_type: paymentType }]);
 
     if (insertError) throw insertError;
 

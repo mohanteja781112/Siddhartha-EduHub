@@ -523,30 +523,26 @@ const TeacherDashboard = () => {
             <Database className="text-edu-gold" size={20} /> Academic Records
           </h3>
           <div className="mb-4">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Select Term</label>
-            <select 
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Enter Term</label>
+            <input 
+              list="exam-terms"
               value={selectedTerm}
               onChange={(e) => setSelectedTerm(e.target.value)}
               className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-edu-blue outline-none font-bold text-edu-navy"
-            >
+              placeholder="e.g., FA1, SA1, etc."
+            />
+            <datalist id="exam-terms">
               <option value="FA1">FA1 (Formative Assessment 1)</option>
               <option value="FA2">FA2 (Formative Assessment 2)</option>
               <option value="SA1">SA1 (Summative Assessment 1)</option>
               <option value="FA3">FA3 (Formative Assessment 3)</option>
               <option value="FA4">FA4 (Formative Assessment 4)</option>
               <option value="SA2">SA2 (Summative Assessment 2)</option>
-              <option value="Term 1">Term 1</option>
-              <option value="Term 2">Term 2</option>
-            </select>
+              <option value="Final Exams">Final Exams</option>
+            </datalist>
           </div>
           
-          <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 mb-5">
-            <p className="text-sm text-gray-700 mb-2 font-semibold flex items-center gap-2"><Lightbulb size={16} className="text-edu-gold" /> Supported CSV Formats:</p>
-            <ol className="text-xs text-gray-600 list-decimal pl-5 space-y-1">
-              <li><span className="font-semibold text-edu-navy">Subject-wise Columns:</span> <span className="font-mono bg-white px-1 border border-gray-200 rounded">Roll Number</span>, <span className="font-mono bg-white px-1 border border-gray-200 rounded">Name</span>, <span className="font-mono bg-white px-1 border border-gray-200 rounded">English</span>, <span className="font-mono bg-white px-1 border border-gray-200 rounded">Maths</span>, <span className="font-mono bg-white px-1 border border-gray-200 rounded">Science</span></li>
-              <li><span className="font-semibold text-edu-navy">Standard List:</span> <span className="font-mono bg-white px-1 border border-gray-200 rounded">Roll Number</span>, <span className="font-mono bg-white px-1 border border-gray-200 rounded">Subject</span>, <span className="font-mono bg-white px-1 border border-gray-200 rounded">Marks</span></li>
-            </ol>
-          </div>
+
           
           <div 
             onDragOver={e => e.preventDefault()}
@@ -603,6 +599,7 @@ const TeacherDashboard = () => {
                     <th className="p-4 font-semibold border-b">Roll No</th>
                     <th className="p-4 font-semibold border-b">Subject</th>
                     <th className="p-4 font-semibold border-b">Marks</th>
+                    <th className="p-4 font-semibold border-b">Total</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
@@ -611,6 +608,7 @@ const TeacherDashboard = () => {
                       <td className="p-4 font-bold text-edu-navy">{row.roll_number}</td>
                       <td className="p-4 text-gray-600">{row.subject}</td>
                       <td className="p-4 font-bold text-edu-blue">{row.marks}</td>
+                      <td className="p-4 text-gray-600">{row.total_marks || 100}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -650,10 +648,12 @@ const TeacherDashboard = () => {
              const rollKey = Object.keys(row).find(k => k.toLowerCase().replace(/[\s_]/g, '') === 'rollnumber');
              const subjKey = Object.keys(row).find(k => k.toLowerCase() === 'subject');
              const marksKey = Object.keys(row).find(k => k.toLowerCase() === 'marks');
+             const totalMarksKey = Object.keys(row).find(k => k.toLowerCase().replace(/[\s_]/g, '') === 'totalmarks');
              return {
                roll_number: row[rollKey],
                subject: row[subjKey],
-               marks: row[marksKey]
+               marks: row[marksKey],
+               total_marks: totalMarksKey ? row[totalMarksKey] : 100
              };
            });
         } else {
@@ -662,19 +662,22 @@ const TeacherDashboard = () => {
            
            rawData.forEach(row => {
              const rollKey = Object.keys(row).find(k => k.toLowerCase().replace(/[\s_]/g, '') === 'rollnumber');
+             const totalMarksKey = Object.keys(row).find(k => k.toLowerCase().replace(/[\s_]/g, '') === 'totalmarks');
              const rollNumber = row[rollKey];
+             const totalMarks = totalMarksKey ? row[totalMarksKey] : 100;
              if (!rollNumber) return;
 
              Object.keys(row).forEach(key => {
                 const normalizedKey = key.trim();
                 const lowerKey = normalizedKey.toLowerCase().replace(/[\s_]/g, '');
                 
-                if (lowerKey !== 'rollnumber' && !ignoreCols.includes(lowerKey)) {
+                if (lowerKey !== 'rollnumber' && lowerKey !== 'totalmarks' && !ignoreCols.includes(lowerKey)) {
                    if (row[key] && String(row[key]).trim() !== '') {
                      normalizedData.push({
                        roll_number: rollNumber,
                        subject: normalizedKey,
-                       marks: row[key]
+                       marks: row[key],
+                       total_marks: totalMarks
                      });
                    }
                 }
@@ -697,7 +700,7 @@ const TeacherDashboard = () => {
       previewData.forEach(row => {
         const student = studentsCache.find(s => s.roll_number === row.roll_number);
         if (student) {
-          marksToInsert.push({ student_id: student.id, subject: row.subject, marks: row.marks, term: selectedTerm });
+          marksToInsert.push({ student_id: student.id, subject: row.subject, marks_obtained: row.marks, exam_type: selectedTerm, total_marks: row.total_marks || 100 });
         } else {
           errors.push(`Roll number ${row.roll_number} not found.`);
         }
