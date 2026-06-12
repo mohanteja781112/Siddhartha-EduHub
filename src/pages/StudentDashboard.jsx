@@ -45,6 +45,8 @@ const StudentDashboard = () => {
   const [questions, setQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState({});
+  const answersRef = useRef({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
   const timerRef = useRef(null);
 
@@ -101,9 +103,14 @@ const StudentDashboard = () => {
       .select('*, exams(title, subject)')
       .eq('student_id', studentId);
 
-    // Filter out exams already taken
+    // Filter out exams already taken and exams older than 24 hours
+    const now = new Date();
     const takenExamIds = (resultsData || []).map(r => r.exam_id);
-    const available = (examsData || []).filter(e => !takenExamIds.includes(e.id));
+    const available = (examsData || []).filter(e => {
+      const isNotTaken = !takenExamIds.includes(e.id);
+      const isNotExpired = (now - new Date(e.created_at)) <= 24 * 60 * 60 * 1000;
+      return isNotTaken && isNotExpired;
+    });
     
     setAvailableExams(available);
     setPastResults(resultsData || []);
@@ -129,6 +136,8 @@ const StudentDashboard = () => {
     setQuestions(qData);
     setCurrentExam(exam);
     setAnswers({});
+    answersRef.current = {};
+    setIsSubmitting(false);
     setCurrentQuestionIndex(0);
     setTimeLeft(exam.time_limit_minutes * 60);
     setActiveTab('take_exam');
@@ -139,7 +148,7 @@ const StudentDashboard = () => {
       setTimeLeft(prev => {
         if (prev <= 1) {
           clearInterval(timerRef.current);
-          submitExam(qData, {}, exam); // Auto submit
+          submitExam(qData, answersRef.current, exam); // Auto submit with latest answers
           return 0;
         }
         return prev - 1;
@@ -148,6 +157,9 @@ const StudentDashboard = () => {
   };
 
   const submitExam = async (currentQuestions = questions, currentAnswers = answers, exam = currentExam) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    
     if (timerRef.current) clearInterval(timerRef.current);
     
     let score = 0;
@@ -155,7 +167,13 @@ const StudentDashboard = () => {
 
     currentQuestions.forEach(q => {
       total += q.marks;
-      if (currentAnswers[q.id] === q.correct_option) {
+      
+      // Get student's selections and format as a sorted comma-separated string (e.g., "A,C")
+      const studentAnswerArray = currentAnswers[q.id] || [];
+      const studentAnswerString = Array.isArray(studentAnswerArray) ? studentAnswerArray.sort().join(',') : studentAnswerArray;
+
+      // Full Match Grading: Only award marks if their selections exactly match the correct options
+      if (studentAnswerString === q.correct_option) {
         score += q.marks;
       }
     });
@@ -173,12 +191,19 @@ const StudentDashboard = () => {
       }]);
 
     if (error) {
-      alert("Error submitting exam: " + error.message);
+      if (error.code === '23505') {
+         alert("Exam already submitted!");
+         setActiveTab('exams');
+         fetchExamsData(profile.class, profile.id);
+      } else {
+         alert("Error submitting exam: " + error.message);
+      }
     } else {
       alert(`Exam Submitted! You scored ${score} out of ${total}`);
       setActiveTab('exams');
       fetchExamsData(profile.class, profile.id); // Refresh data
     }
+    setIsSubmitting(false);
   };
 
   const formatTime = (seconds) => {
@@ -455,26 +480,51 @@ const StudentDashboard = () => {
 
               <div className="space-y-3 sm:space-y-4">
                 {['A', 'B', 'C', 'D'].map((opt) => {
-                  const optionText = questions[currentQuestionIndex][`option_${opt.toLowerCase()}`];
-                  const isSelected = answers[questions[currentQuestionIndex].id] === opt;
+                  const currentQuestion = questions[currentQuestionIndex];
+                  const optionText = currentQuestion[`option_${opt.toLowerCase()}`];
+                  const currentSelections = answers[currentQuestion.id] || [];
+                  const isSelected = currentSelections.includes(opt);
+                  
+                  // Check if this question is meant to be multiple choice or single choice
+                  const isMultipleChoice = currentQuestion.correct_option.split(',').length > 1;
                   
                   return (
                     <button
                       key={opt}
-                      onClick={() => setAnswers({...answers, [questions[currentQuestionIndex].id]: opt})}
+                      onClick={() => {
+                        let newSelections;
+                        if (!isMultipleChoice) {
+                          // Single choice: clicking an option replaces the old one, clicking same deselects
+                          newSelections = isSelected ? [] : [opt];
+                        } else {
+                          // Multiple choice: toggle the clicked option
+                          if (isSelected) {
+                            newSelections = currentSelections.filter(o => o !== opt);
+                          } else {
+                            newSelections = [...currentSelections, opt];
+                          }
+                        }
+                        const newAnswers = {...answers, [currentQuestion.id]: newSelections};
+                        setAnswers(newAnswers);
+                        answersRef.current = newAnswers;
+                      }}
                       className={`w-full text-left p-4 rounded-xl border-2 transition-all flex items-start gap-4 ${
                         isSelected 
                           ? 'border-edu-blue bg-blue-50 shadow-md transform scale-[1.01]' 
                           : 'border-gray-100 hover:border-gray-300 hover:bg-gray-50'
                       }`}
                     >
-                      <div className={`shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-bold mt-0.5 ${
+                      <div className={`shrink-0 w-6 h-6 ${isMultipleChoice ? 'rounded-md' : 'rounded-full'} border-2 flex items-center justify-center text-xs font-bold mt-0.5 ${
                         isSelected ? 'border-edu-blue bg-edu-blue text-white' : 'border-gray-300 text-gray-500'
                       }`}>
-                        {opt}
+                        {isSelected && (
+                           isMultipleChoice 
+                             ? <CheckCircle size={14} className="text-white" />
+                             : <div className="w-2.5 h-2.5 bg-white rounded-full"></div>
+                        )}
                       </div>
                       <span className={`text-sm sm:text-base ${isSelected ? 'font-medium text-edu-navy' : 'text-gray-700'}`}>
-                        {optionText}
+                        <span className="font-bold text-gray-400 mr-2">{opt}.</span> {optionText}
                       </span>
                     </button>
                   );
@@ -495,9 +545,10 @@ const StudentDashboard = () => {
               {currentQuestionIndex === questions.length - 1 ? (
                 <button
                   onClick={() => submitExam()}
-                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-8 py-3 bg-green-500 text-white rounded-xl font-bold hover:bg-green-600 transition-colors shadow-md"
+                  disabled={isSubmitting}
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-8 py-3 bg-green-500 text-white rounded-xl font-bold hover:bg-green-600 transition-colors shadow-md disabled:opacity-50"
                 >
-                  <CheckCircle size={20} /> Submit Exam
+                  <CheckCircle size={20} /> {isSubmitting ? 'Submitting...' : 'Submit Exam'}
                 </button>
               ) : (
                 <button

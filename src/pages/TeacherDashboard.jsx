@@ -38,7 +38,7 @@ const TeacherDashboard = () => {
   
   // New Question Form State
   const [newQuestion, setNewQuestion] = useState({
-    question_text: '', option_a: '', option_b: '', option_c: '', option_d: '', correct_option: 'A', marks: 1
+    question_text: '', option_a: '', option_b: '', option_c: '', option_d: '', correct_option: ['A'], marks: 1
   });
   const [questions, setQuestions] = useState([]);
   const [results, setResults] = useState([]);
@@ -186,17 +186,33 @@ const TeacherDashboard = () => {
     e.preventDefault();
     if (!selectedExam) return;
 
-    const { data, error } = await supabase
+      const questionToSave = { 
+        ...newQuestion, 
+        exam_id: selectedExam.id,
+        correct_option: newQuestion.correct_option.sort().join(',')
+      };
+
+      const { error } = await supabase
       .from('questions')
-      .insert([
-        { ...newQuestion, exam_id: selectedExam.id }
-      ]);
+      .insert([questionToSave]);
 
     if (error) {
       alert('Error adding question: ' + error.message);
     } else {
       alert('Question added!');
-      setNewQuestion({ question_text: '', option_a: '', option_b: '', option_c: '', option_d: '', correct_option: 'A', marks: 1 });
+      setNewQuestion({ question_text: '', option_a: '', option_b: '', option_c: '', option_d: '', correct_option: ['A'], marks: 1 });
+      fetchQuestions(selectedExam.id);
+    }
+  };
+
+  const handleDeleteQuestion = async (questionId) => {
+    if (!window.confirm("Are you sure you want to delete this question?")) return;
+
+    const { error } = await supabase.from('questions').delete().eq('id', questionId);
+    
+    if (error) {
+      alert("Error deleting question: " + error.message);
+    } else {
       fetchQuestions(selectedExam.id);
     }
   };
@@ -254,13 +270,25 @@ const TeacherDashboard = () => {
                   <td className="p-5 text-gray-600">{exam.subject}</td>
                   <td className="p-5 text-gray-600">{exam.time_limit_minutes}</td>
                   <td className="p-5">
-                    <span className={`px-4 py-1.5 rounded-full text-xs font-semibold shadow-sm inline-block
-                      ${exam.is_active 
-                        ? 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 border border-green-200 shadow-green-100' 
-                        : 'bg-gradient-to-r from-red-50 to-red-100 text-red-700 border border-red-100'}`}
-                    >
-                      {exam.is_active ? 'Active' : 'Inactive'}
-                    </span>
+                    {(() => {
+                      const isExpired = (new Date() - new Date(exam.created_at)) > 24 * 60 * 60 * 1000;
+                      if (isExpired) {
+                        return (
+                          <span className="px-4 py-1.5 rounded-full text-xs font-semibold shadow-sm inline-block bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800 border border-gray-300">
+                            Expired (24h+)
+                          </span>
+                        );
+                      }
+                      return (
+                        <span className={`px-4 py-1.5 rounded-full text-xs font-semibold shadow-sm inline-block
+                          ${exam.is_active 
+                            ? 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 border border-green-200 shadow-green-100' 
+                            : 'bg-gradient-to-r from-red-50 to-red-100 text-red-700 border border-red-100'}`}
+                        >
+                          {exam.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="p-5 flex gap-2">
                     <button 
@@ -396,14 +424,29 @@ const TeacherDashboard = () => {
             </div>
           </div>
           <div className="grid grid-cols-2 gap-5">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Correct Option</label>
-              <select className="w-full p-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-edu-blue transition-all" value={newQuestion.correct_option} onChange={e => setNewQuestion({...newQuestion, correct_option: e.target.value})}>
-                <option value="A">Option A</option>
-                <option value="B">Option B</option>
-                <option value="C">Option C</option>
-                <option value="D">Option D</option>
-              </select>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Correct Option(s) (Select all that apply)</label>
+              <div className="flex gap-4">
+                {['A', 'B', 'C', 'D'].map(opt => (
+                  <label key={opt} className="flex items-center gap-2 p-2 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                    <input 
+                      type="checkbox" 
+                      className="w-4 h-4 text-edu-blue rounded border-gray-300 focus:ring-edu-blue"
+                      checked={newQuestion.correct_option.includes(opt)}
+                      onChange={(e) => {
+                        const newOptions = e.target.checked 
+                          ? [...newQuestion.correct_option, opt]
+                          : newQuestion.correct_option.filter(o => o !== opt);
+                        // Prevent unchecking all
+                        if (newOptions.length > 0) {
+                          setNewQuestion({...newQuestion, correct_option: newOptions});
+                        }
+                      }}
+                    />
+                    <span className="font-semibold text-gray-700">Option {opt}</span>
+                  </label>
+                ))}
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Marks</label>
@@ -427,15 +470,26 @@ const TeacherDashboard = () => {
               key={q.id} 
               className="p-5 border border-gray-100 rounded-xl bg-white hover:shadow-md transition-shadow duration-300"
             >
-              <div className="flex justify-between items-start mb-3">
+              <div className="flex justify-between items-start mb-3 gap-4">
                 <p className="font-semibold text-gray-800 text-lg">Q{i + 1}. <span className="font-normal">{q.question_text}</span></p>
-                <span className="text-sm font-semibold bg-gray-100 text-gray-600 px-3 py-1 rounded-full">{q.marks} Marks</span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-sm font-semibold bg-gray-100 text-gray-600 px-3 py-1 rounded-full whitespace-nowrap">{q.marks} Marks</span>
+                  {!selectedExam?.is_active && (
+                    <button 
+                      onClick={() => handleDeleteQuestion(q.id)}
+                      className="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 p-1.5 rounded-lg transition-colors"
+                      title="Delete Question"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm mt-4">
-                <div className={`p-3 rounded-lg border ${q.correct_option === 'A' ? 'bg-green-50 border-green-200 text-green-800 font-semibold' : 'bg-gray-50/50 border-gray-100 text-gray-600'}`}>A) {q.option_a}</div>
-                <div className={`p-3 rounded-lg border ${q.correct_option === 'B' ? 'bg-green-50 border-green-200 text-green-800 font-semibold' : 'bg-gray-50/50 border-gray-100 text-gray-600'}`}>B) {q.option_b}</div>
-                <div className={`p-3 rounded-lg border ${q.correct_option === 'C' ? 'bg-green-50 border-green-200 text-green-800 font-semibold' : 'bg-gray-50/50 border-gray-100 text-gray-600'}`}>C) {q.option_c}</div>
-                <div className={`p-3 rounded-lg border ${q.correct_option === 'D' ? 'bg-green-50 border-green-200 text-green-800 font-semibold' : 'bg-gray-50/50 border-gray-100 text-gray-600'}`}>D) {q.option_d}</div>
+                <div className={`p-3 rounded-lg border ${q.correct_option.split(',').includes('A') ? 'bg-green-50 border-green-200 text-green-800 font-semibold' : 'bg-gray-50/50 border-gray-100 text-gray-600'}`}>A) {q.option_a}</div>
+                <div className={`p-3 rounded-lg border ${q.correct_option.split(',').includes('B') ? 'bg-green-50 border-green-200 text-green-800 font-semibold' : 'bg-gray-50/50 border-gray-100 text-gray-600'}`}>B) {q.option_b}</div>
+                <div className={`p-3 rounded-lg border ${q.correct_option.split(',').includes('C') ? 'bg-green-50 border-green-200 text-green-800 font-semibold' : 'bg-gray-50/50 border-gray-100 text-gray-600'}`}>C) {q.option_c}</div>
+                <div className={`p-3 rounded-lg border ${q.correct_option.split(',').includes('D') ? 'bg-green-50 border-green-200 text-green-800 font-semibold' : 'bg-gray-50/50 border-gray-100 text-gray-600'}`}>D) {q.option_d}</div>
               </div>
             </motion.div>
           ))}
