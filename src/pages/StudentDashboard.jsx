@@ -342,8 +342,45 @@ const StudentDashboard = () => {
             {/* Right Column */}
             <div className="lg:col-span-2 space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <DashboardCard title="Overall Marks" value={`${profile?.overall_marks || 0}%`} icon={TrendingUp} color="from-purple-500 to-indigo-600" delay={0.1} />
-                <DashboardCard title="Current Rank" value="Top 15%" icon={Award} color="from-edu-gold to-yellow-500" delay={0.2} />
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.5 }}
+                  onClick={() => setActiveTab('exams')}
+                  className="glass-card rounded-[2rem] p-6 shadow-apple hover:shadow-lg transition-all duration-300 hover:-translate-y-1 flex items-center gap-5 cursor-pointer border border-transparent hover:border-blue-100 group"
+                >
+                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-white shadow-md bg-gradient-to-br from-blue-500 to-edu-blue group-hover:scale-105 transition-transform">
+                    <FileText size={28} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-gray-500 mb-0.5">Pending Exams</p>
+                    <h3 className="text-2xl font-bold text-gray-900 font-outfit">
+                      {availableExams.length > 0 ? (
+                         <span className="text-red-500">{availableExams.length} Due</span>
+                      ) : (
+                         <span className="text-green-500">All Clear</span>
+                      )}
+                    </h3>
+                  </div>
+                </motion.div>
+
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.5 }}
+                  onClick={() => setActiveTab('fees')}
+                  className="glass-card rounded-[2rem] p-6 shadow-apple hover:shadow-lg transition-all duration-300 hover:-translate-y-1 flex items-center gap-5 cursor-pointer border border-transparent hover:border-red-100 group"
+                >
+                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-white shadow-md bg-gradient-to-br from-orange-400 to-red-500 group-hover:scale-105 transition-transform">
+                    <CreditCard size={28} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-gray-500 mb-0.5">Fee Dues</p>
+                    <h3 className="text-2xl font-bold text-gray-900 font-outfit">
+                      {profile?.pending_fees > 0 ? (
+                         <span className="text-red-500">₹{(profile.pending_fees).toLocaleString()}</span>
+                      ) : (
+                         <span className="text-green-500">No Dues</span>
+                      )}
+                    </h3>
+                  </div>
+                </motion.div>
               </div>
 
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="glass-card rounded-[2rem] overflow-hidden">
