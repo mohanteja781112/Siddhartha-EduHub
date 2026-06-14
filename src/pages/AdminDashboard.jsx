@@ -26,7 +26,7 @@ const AdminDashboard = () => {
   };
   
   // --- Bulk Import State ---
-  const [importMode, setImportMode] = useState('new'); // 'new' | 'promote'
+  const [importMode, setImportMode] = useState('promote'); // 'promote' | 'delete'
   const [file, setFile] = useState(null);
   const [previewData, setPreviewData] = useState([]);
   const [isParsing, setIsParsing] = useState(false);
@@ -223,12 +223,7 @@ const AdminDashboard = () => {
   // --- Bulk Import Logic ---
   const EXPECTED_HEADERS = importMode === 'delete'
     ? ['roll_number']
-    : importMode === 'promote'
-      ? ['roll_number', 'class', 'total_fees']
-      : [
-          'username', 'password', 'full_name', 'class', 'section', 
-          'roll_number', 'email', 'phone', 'address', 'total_fees'
-        ];
+    : ['roll_number', 'class', 'total_fees']; // 'promote' mode
 
   const handleFileUpload = (e) => {
     const selectedFile = e.target.files[0];
@@ -280,28 +275,13 @@ const AdminDashboard = () => {
         }
         const rollNumbers = previewData.map(student => student.roll_number);
         await bulkDeleteStudents(rollNumbers);
-      } else if (importMode === 'promote') {
+      } else {
         const cleanedData = previewData.map(student => ({
           roll_number: student.roll_number,
           class: student.class,
           total_fees: student.total_fees
         }));
         await bulkPromoteStudents(cleanedData);
-      } else {
-        const cleanedData = previewData.map(student => {
-          const cleanStudent = { ...student };
-          delete cleanStudent.password;
-          
-          cleanStudent.total_fees = cleanStudent.total_fees ? parseInt(cleanStudent.total_fees, 10) : 0;
-          cleanStudent.attendance_percentage = 0;
-          cleanStudent.overall_marks = 0;
-          cleanStudent.pending_fees = cleanStudent.total_fees;
-          
-          if (!cleanStudent.dob) cleanStudent.dob = '01012000'; 
-          return cleanStudent;
-        });
-
-        await adminBulkInsertStudents(cleanedData);
       }
       
       setUploadStatus('success');
@@ -461,12 +441,6 @@ const AdminDashboard = () => {
                 
                 {/* Mode Toggle */}
                 <div className="glass-card rounded-[2rem] p-2 flex flex-col sm:flex-row gap-2 bg-gray-100/50">
-                  <button 
-                    onClick={() => { setImportMode('new'); setFile(null); setPreviewData([]); setErrorMessage(''); setUploadStatus(null); }}
-                    className={`flex-1 py-2 px-2 rounded-xl font-bold text-xs sm:text-sm transition-all ${importMode === 'new' ? 'bg-white shadow-md text-edu-navy' : 'text-gray-500 hover:text-gray-700'}`}
-                  >
-                    Add New Students
-                  </button>
                   <button 
                     onClick={() => { setImportMode('promote'); setFile(null); setPreviewData([]); setErrorMessage(''); setUploadStatus(null); }}
                     className={`flex-1 py-2 px-2 rounded-xl font-bold text-xs sm:text-sm transition-all ${importMode === 'promote' ? 'bg-white shadow-md text-edu-navy' : 'text-gray-500 hover:text-gray-700'}`}
