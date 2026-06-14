@@ -261,12 +261,28 @@ export const updateStudentDetails = async (studentId, updates) => {
 
 export const deleteStudent = async (studentId) => {
   try {
-    const { error } = await supabase
+    // 1. Fetch the auth_user_id for the student
+    const { data: student, error: fetchErr } = await supabase
       .from('students')
-      .delete()
-      .eq('id', studentId);
+      .select('auth_user_id')
+      .eq('id', studentId)
+      .single();
       
-    if (error) throw error;
+    if (fetchErr) throw fetchErr;
+
+    // 2. Call our secure RPC function to delete the auth account entirely
+    // (This automatically cascades to profiles, students, marks, etc.)
+    if (student && student.auth_user_id) {
+      const { error: rpcError } = await supabase.rpc('delete_admin_user', {
+        target_user_id: student.auth_user_id
+      });
+      if (rpcError) throw rpcError;
+    } else {
+      // Fallback: If no auth user exists, just delete from students
+      const { error } = await supabase.from('students').delete().eq('id', studentId);
+      if (error) throw error;
+    }
+
     return { success: true };
   } catch (error) {
     console.error('Error deleting student:', error.message);
@@ -350,12 +366,27 @@ export const bulkDeleteStudents = async (rollNumbersArray) => {
       
       await Promise.all(batch.map(async (roll_number) => {
         try {
-          const { error } = await supabase
+          // 1. Fetch auth_user_id
+          const { data: student, error: fetchErr } = await supabase
             .from('students')
-            .delete()
-            .eq('roll_number', roll_number);
+            .select('auth_user_id')
+            .eq('roll_number', roll_number)
+            .single();
             
-          if (error) throw error;
+          if (fetchErr) throw fetchErr;
+
+          // 2. Delete full account via RPC
+          if (student && student.auth_user_id) {
+            const { error: rpcError } = await supabase.rpc('delete_admin_user', {
+              target_user_id: student.auth_user_id
+            });
+            if (rpcError) throw rpcError;
+          } else {
+            // Fallback just in case
+            const { error } = await supabase.from('students').delete().eq('roll_number', roll_number);
+            if (error) throw error;
+          }
+            
           successCount++;
         } catch (err) {
           errors.push(`Roll ${roll_number}: ${err.message}`);
