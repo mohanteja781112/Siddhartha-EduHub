@@ -24,15 +24,11 @@ dist-ssr
 *.sln
 *.sw?
 
+data/
 scripts/
+*.csv
 test_supabase.js
-supabase_setup.sql
-import_auth.js
-students.csv
-students_credentials.csv
-students_credentials_export.csv
-students_original.csv
-sample_marks.csv
+supabase__setup.sql
 # Environment variables
 .env
 .env.*
