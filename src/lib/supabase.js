@@ -241,3 +241,136 @@ export const toggleProfileStatus = async (profileId, isActive) => {
     throw error;
   }
 };
+
+export const updateStudentDetails = async (studentId, updates) => {
+  try {
+    const { data, error } = await supabase
+      .from('students')
+      .update(updates)
+      .eq('id', studentId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error updating student details:', error.message);
+    throw error;
+  }
+};
+
+export const deleteStudent = async (studentId) => {
+  try {
+    const { error } = await supabase
+      .from('students')
+      .delete()
+      .eq('id', studentId);
+      
+    if (error) throw error;
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting student:', error.message);
+    throw error;
+  }
+};
+
+export const bulkPromoteStudents = async (promotionsArray) => {
+  try {
+    let successCount = 0;
+    let errors = [];
+
+    // Process in batches of 10
+    const batchSize = 10;
+    for (let i = 0; i < promotionsArray.length; i += batchSize) {
+      const batch = promotionsArray.slice(i, i + batchSize);
+      
+      await Promise.all(batch.map(async (student) => {
+        try {
+          const { roll_number, class: newClass, total_fees } = student;
+          const newTotalFees = parseInt(total_fees, 10) || 0;
+          
+          // Fetch existing to get ID and current pending fees
+          const { data: existing, error: fetchErr } = await supabase
+            .from('students')
+            .select('id, pending_fees')
+            .eq('roll_number', roll_number)
+            .single();
+            
+          if (fetchErr) throw fetchErr;
+          
+          // Delete offline marks (FA1, SA1, etc)
+          await supabase.from('student_marks').delete().eq('student_id', existing.id);
+          
+          // Delete online exam results
+          await supabase.from('student_exam_results').delete().eq('student_id', existing.id);
+          
+          const previousDues = existing.pending_fees > 0 ? existing.pending_fees : 0;
+          const newPendingFees = previousDues + newTotalFees;
+
+          const { error } = await supabase
+            .from('students')
+            .update({ 
+              class: newClass, 
+              total_fees: newTotalFees, 
+              previous_dues: previousDues,
+              pending_fees: newPendingFees,
+              overall_marks: 0
+            })
+            .eq('roll_number', roll_number);
+            
+          if (error) throw error;
+          successCount++;
+        } catch (err) {
+          errors.push(`Roll ${student.roll_number}: ${err.message}`);
+        }
+      }));
+    }
+
+    if (errors.length > 0) {
+      console.warn(`Bulk promotion completed with ${errors.length} errors:`, errors);
+      if (successCount === 0) throw new Error(errors[0]);
+    }
+
+    return { success: true, count: successCount, errors };
+  } catch (error) {
+    console.error('Error in bulk promotion:', error.message);
+    throw error;
+  }
+};
+
+export const bulkDeleteStudents = async (rollNumbersArray) => {
+  try {
+    let successCount = 0;
+    let errors = [];
+
+    // Process in batches of 10
+    const batchSize = 10;
+    for (let i = 0; i < rollNumbersArray.length; i += batchSize) {
+      const batch = rollNumbersArray.slice(i, i + batchSize);
+      
+      await Promise.all(batch.map(async (roll_number) => {
+        try {
+          const { error } = await supabase
+            .from('students')
+            .delete()
+            .eq('roll_number', roll_number);
+            
+          if (error) throw error;
+          successCount++;
+        } catch (err) {
+          errors.push(`Roll ${roll_number}: ${err.message}`);
+        }
+      }));
+    }
+
+    if (errors.length > 0) {
+      console.warn(`Bulk delete completed with ${errors.length} errors:`, errors);
+      if (successCount === 0) throw new Error(errors[0]);
+    }
+
+    return { success: true, count: successCount, errors };
+  } catch (error) {
+    console.error('Error in bulk delete:', error.message);
+    throw error;
+  }
+};

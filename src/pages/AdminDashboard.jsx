@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   UploadCloud, FileText, CheckCircle, XCircle, 
   Users, AlertTriangle, ArrowRight, Loader2,
@@ -10,14 +10,23 @@ import Papa from 'papaparse';
 import { 
   adminBulkInsertStudents, getStudentSession, logoutStudent,
   getAdminFeesData, recordFeePayment, getStudentPayments,
-  getAllProfiles, updateProfileRole, getAllStudentsInfo, toggleProfileStatus
+  getAllProfiles, updateProfileRole, getAllStudentsInfo, toggleProfileStatus, updateStudentDetails, bulkPromoteStudents, deleteStudent, bulkDeleteStudents
 } from '../lib/supabase';
 
 const AdminDashboard = () => {
   const [authChecking, setAuthChecking] = useState(true);
-  const [activeTab, setActiveTab] = useState('import'); // 'import' | 'fees'
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'import'; // 'import' | 'fees'
+  
+  const setActiveTab = (tab) => {
+    setSearchParams(prev => {
+      prev.set('tab', tab);
+      return prev;
+    }, { replace: true });
+  };
   
   // --- Bulk Import State ---
+  const [importMode, setImportMode] = useState('new'); // 'new' | 'promote'
   const [file, setFile] = useState(null);
   const [previewData, setPreviewData] = useState([]);
   const [isParsing, setIsParsing] = useState(false);
@@ -50,6 +59,11 @@ const AdminDashboard = () => {
   const [isFetchingDirectory, setIsFetchingDirectory] = useState(false);
   const [selectedStudentForCard, setSelectedStudentForCard] = useState(null);
   const [directorySearchQuery, setDirectorySearchQuery] = useState('');
+  
+  // --- Edit Student State ---
+  const [isEditingStudent, setIsEditingStudent] = useState(false);
+  const [editStudentForm, setEditStudentForm] = useState(null);
+  const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
 
   const navigate = useNavigate();
 
@@ -136,16 +150,85 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmittingEdit(true);
+    try {
+      const newTotalFees = parseInt(editStudentForm.total_fees, 10) || 0;
+      let newPreviousDues = parseInt(editStudentForm.previous_dues, 10) || 0;
+      let newPendingFees = selectedStudentForCard.pending_fees || 0;
+
+      if (editStudentForm.reset_pending) {
+        newPendingFees = newPreviousDues + newTotalFees;
+      } else if (newTotalFees !== (selectedStudentForCard.total_fees || 0) || newPreviousDues !== (selectedStudentForCard.previous_dues || 0)) {
+        const oldTotalAndDues = (selectedStudentForCard.total_fees || 0) + (selectedStudentForCard.previous_dues || 0);
+        const newTotalAndDues = newTotalFees + newPreviousDues;
+        const delta = newTotalAndDues - oldTotalAndDues;
+        newPendingFees = Math.max(0, newPendingFees + delta);
+      }
+
+      const updates = {
+        full_name: editStudentForm.full_name,
+        class: editStudentForm.class,
+        section: editStudentForm.section,
+        parent_name: editStudentForm.parent_name,
+        dob: editStudentForm.dob,
+        phone: editStudentForm.phone,
+        address: editStudentForm.address,
+        total_fees: newTotalFees,
+        previous_dues: newPreviousDues,
+        pending_fees: newPendingFees
+      };
+      
+      const updatedStudent = await updateStudentDetails(selectedStudentForCard.id, updates);
+      
+      // Update local state to reflect changes instantly
+      setDirectoryData(prev => prev.map(s => s.id === updatedStudent.id ? updatedStudent : s));
+      setSelectedStudentForCard(updatedStudent);
+      setIsEditingStudent(false);
+      
+      // Also update feesData if full_name or class changed
+      setFeesData(prev => prev.map(s => s.id === updatedStudent.id ? { ...s, full_name: updatedStudent.full_name, class: updatedStudent.class, section: updatedStudent.section } : s));
+      
+      alert("Student profile updated successfully!");
+    } catch (err) {
+      alert("Error updating student: " + err.message);
+    } finally {
+      setIsSubmittingEdit(false);
+    }
+  };
+
+  const handleDeleteStudent = async () => {
+    if (!window.confirm(`Are you absolutely sure you want to permanently delete ${selectedStudentForCard.full_name}? This action cannot be undone and will delete all their fee payments, marks, and records.`)) {
+      return;
+    }
+    
+    try {
+      await deleteStudent(selectedStudentForCard.id);
+      setDirectoryData(prev => prev.filter(s => s.id !== selectedStudentForCard.id));
+      setFeesData(prev => prev.filter(s => s.id !== selectedStudentForCard.id));
+      setSelectedStudentForCard(null);
+      setIsEditingStudent(false);
+      alert("Student deleted successfully.");
+    } catch (err) {
+      alert("Error deleting student: " + err.message);
+    }
+  };
+
   const handleLogout = async () => {
     await logoutStudent();
     navigate('/login?role=admin');
   };
 
   // --- Bulk Import Logic ---
-  const EXPECTED_HEADERS = [
-    'username', 'password', 'full_name', 'class', 'section', 
-    'roll_number', 'email', 'phone', 'address', 'total_fees'
-  ];
+  const EXPECTED_HEADERS = importMode === 'delete'
+    ? ['roll_number']
+    : importMode === 'promote'
+      ? ['roll_number', 'class', 'total_fees']
+      : [
+          'username', 'password', 'full_name', 'class', 'section', 
+          'roll_number', 'email', 'phone', 'address', 'total_fees'
+        ];
 
   const handleFileUpload = (e) => {
     const selectedFile = e.target.files[0];
@@ -190,20 +273,37 @@ const AdminDashboard = () => {
     setErrorMessage('');
 
     try {
-      const cleanedData = previewData.map(student => {
-        const cleanStudent = { ...student };
-        delete cleanStudent.password;
-        
-        cleanStudent.total_fees = cleanStudent.total_fees ? parseInt(cleanStudent.total_fees, 10) : 0;
-        cleanStudent.attendance_percentage = 0;
-        cleanStudent.overall_marks = 0;
-        cleanStudent.pending_fees = cleanStudent.total_fees;
-        
-        if (!cleanStudent.dob) cleanStudent.dob = '01012000'; 
-        return cleanStudent;
-      });
+      if (importMode === 'delete') {
+        if (!window.confirm(`DANGER: You are about to permanently delete ${previewData.length} students. All their fee records, marks, and profiles will be destroyed. Do you wish to proceed?`)) {
+          setIsUploading(false);
+          return;
+        }
+        const rollNumbers = previewData.map(student => student.roll_number);
+        await bulkDeleteStudents(rollNumbers);
+      } else if (importMode === 'promote') {
+        const cleanedData = previewData.map(student => ({
+          roll_number: student.roll_number,
+          class: student.class,
+          total_fees: student.total_fees
+        }));
+        await bulkPromoteStudents(cleanedData);
+      } else {
+        const cleanedData = previewData.map(student => {
+          const cleanStudent = { ...student };
+          delete cleanStudent.password;
+          
+          cleanStudent.total_fees = cleanStudent.total_fees ? parseInt(cleanStudent.total_fees, 10) : 0;
+          cleanStudent.attendance_percentage = 0;
+          cleanStudent.overall_marks = 0;
+          cleanStudent.pending_fees = cleanStudent.total_fees;
+          
+          if (!cleanStudent.dob) cleanStudent.dob = '01012000'; 
+          return cleanStudent;
+        });
 
-      await adminBulkInsertStudents(cleanedData);
+        await adminBulkInsertStudents(cleanedData);
+      }
+      
       setUploadStatus('success');
       setFile(null);
       setPreviewData([]);
@@ -358,6 +458,29 @@ const AdminDashboard = () => {
             >
               {/* Left Column - Instructions & Upload */}
               <div className="lg:col-span-1 space-y-6">
+                
+                {/* Mode Toggle */}
+                <div className="glass-card rounded-[2rem] p-2 flex flex-col sm:flex-row gap-2 bg-gray-100/50">
+                  <button 
+                    onClick={() => { setImportMode('new'); setFile(null); setPreviewData([]); setErrorMessage(''); setUploadStatus(null); }}
+                    className={`flex-1 py-2 px-2 rounded-xl font-bold text-xs sm:text-sm transition-all ${importMode === 'new' ? 'bg-white shadow-md text-edu-navy' : 'text-gray-500 hover:text-gray-700'}`}
+                  >
+                    Add New Students
+                  </button>
+                  <button 
+                    onClick={() => { setImportMode('promote'); setFile(null); setPreviewData([]); setErrorMessage(''); setUploadStatus(null); }}
+                    className={`flex-1 py-2 px-2 rounded-xl font-bold text-xs sm:text-sm transition-all ${importMode === 'promote' ? 'bg-white shadow-md text-edu-navy' : 'text-gray-500 hover:text-gray-700'}`}
+                  >
+                    Yearly Promotion
+                  </button>
+                  <button 
+                    onClick={() => { setImportMode('delete'); setFile(null); setPreviewData([]); setErrorMessage(''); setUploadStatus(null); }}
+                    className={`flex-1 py-2 px-2 rounded-xl font-bold text-xs sm:text-sm transition-all ${importMode === 'delete' ? 'bg-red-50 shadow-md text-red-600 border border-red-100' : 'text-gray-500 hover:text-red-500'}`}
+                  >
+                    Bulk Delete
+                  </button>
+                </div>
+
                 <div className="glass-card rounded-[2rem] p-8">
                   <h3 className="font-bold text-edu-navy mb-4 flex items-center gap-2">
                     <FileText className="text-edu-gold" size={20} /> CSV Format Requirements
@@ -895,12 +1018,41 @@ const AdminDashboard = () => {
             >
               {/* Card Header Background */}
               <div className="h-32 bg-gradient-to-r from-edu-navy via-[#1e4b78] to-edu-blue relative shrink-0">
-                <button 
-                  onClick={() => setSelectedStudentForCard(null)} 
-                  className="absolute top-4 right-4 text-white/70 hover:text-white bg-black/20 hover:bg-black/40 p-2 rounded-full transition-colors backdrop-blur-sm z-10"
-                >
-                  <XCircle size={20} />
-                </button>
+                <div className="absolute top-4 right-4 flex gap-2 z-10">
+                  <button 
+                    onClick={() => {
+                      if (isEditingStudent) {
+                        setIsEditingStudent(false);
+                      } else {
+                        setEditStudentForm({
+                          full_name: selectedStudentForCard.full_name || '',
+                          class: selectedStudentForCard.class || '',
+                          section: selectedStudentForCard.section || '',
+                          parent_name: selectedStudentForCard.parent_name || '',
+                          dob: selectedStudentForCard.dob || '',
+                          phone: selectedStudentForCard.phone || '',
+                          address: selectedStudentForCard.address || '',
+                          total_fees: selectedStudentForCard.total_fees || 0,
+                          previous_dues: selectedStudentForCard.previous_dues || 0,
+                          reset_pending: false
+                        });
+                        setIsEditingStudent(true);
+                      }
+                    }} 
+                    className="text-white/80 hover:text-white bg-black/20 hover:bg-black/40 px-3 py-1.5 rounded-full transition-colors backdrop-blur-sm text-sm font-semibold flex items-center gap-1"
+                  >
+                    {isEditingStudent ? 'Cancel Edit' : 'Edit Profile'}
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setSelectedStudentForCard(null);
+                      setIsEditingStudent(false);
+                    }} 
+                    className="text-white/80 hover:text-white bg-black/20 hover:bg-black/40 p-1.5 rounded-full transition-colors backdrop-blur-sm"
+                  >
+                    <XCircle size={20} />
+                  </button>
+                </div>
               </div>
 
               {/* Profile Image & Header */}
@@ -931,9 +1083,81 @@ const AdminDashboard = () => {
 
               {/* Scrollable Content */}
               <div className="p-6 sm:px-10 overflow-y-auto flex-1 bg-gray-50/30">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                  
-                  {/* Academic Info */}
+                {isEditingStudent ? (
+                  <form onSubmit={handleEditSubmit} className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Full Name</label>
+                        <input type="text" required value={editStudentForm.full_name} onChange={(e) => setEditStudentForm({...editStudentForm, full_name: e.target.value})} className="w-full p-2.5 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-edu-blue focus:border-edu-blue outline-none text-sm" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Parent/Guardian Name</label>
+                        <input type="text" value={editStudentForm.parent_name} onChange={(e) => setEditStudentForm({...editStudentForm, parent_name: e.target.value})} className="w-full p-2.5 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-edu-blue focus:border-edu-blue outline-none text-sm" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Class</label>
+                        <input type="text" required value={editStudentForm.class} onChange={(e) => setEditStudentForm({...editStudentForm, class: e.target.value})} className="w-full p-2.5 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-edu-blue focus:border-edu-blue outline-none text-sm" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Section</label>
+                        <input type="text" value={editStudentForm.section} onChange={(e) => setEditStudentForm({...editStudentForm, section: e.target.value})} className="w-full p-2.5 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-edu-blue focus:border-edu-blue outline-none text-sm" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Date of Birth</label>
+                        <input type="date" value={editStudentForm.dob ? new Date(editStudentForm.dob).toISOString().split('T')[0] : ''} onChange={(e) => setEditStudentForm({...editStudentForm, dob: e.target.value})} className="w-full p-2.5 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-edu-blue focus:border-edu-blue outline-none text-sm" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Phone Number</label>
+                        <input type="text" value={editStudentForm.phone} onChange={(e) => setEditStudentForm({...editStudentForm, phone: e.target.value})} className="w-full p-2.5 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-edu-blue focus:border-edu-blue outline-none text-sm" />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Address</label>
+                        <textarea value={editStudentForm.address} onChange={(e) => setEditStudentForm({...editStudentForm, address: e.target.value})} className="w-full p-2.5 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-edu-blue focus:border-edu-blue outline-none text-sm min-h-[80px]"></textarea>
+                      </div>
+                    </div>
+
+                    {/* Financial Edit Section */}
+                    <div className="bg-orange-50 border border-orange-100 p-5 rounded-2xl space-y-4">
+                      <h4 className="font-bold text-orange-800 text-sm flex items-center gap-2"><Wallet size={16} /> Manage Financials</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-bold text-orange-900 uppercase tracking-wider mb-1">Total Fees (Current Year)</label>
+                          <input type="number" required min="0" value={editStudentForm.total_fees} onChange={(e) => setEditStudentForm({...editStudentForm, total_fees: e.target.value})} className="w-full p-2.5 bg-white border border-orange-200 rounded-xl focus:ring-2 focus:ring-orange-400 outline-none text-sm font-bold text-orange-900" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-orange-900 uppercase tracking-wider mb-1">Previous Year Dues</label>
+                          <input type="number" min="0" value={editStudentForm.previous_dues} onChange={(e) => setEditStudentForm({...editStudentForm, previous_dues: e.target.value})} className="w-full p-2.5 bg-white border border-orange-200 rounded-xl focus:ring-2 focus:ring-orange-400 outline-none text-sm font-bold text-red-600" />
+                        </div>
+                      </div>
+                      
+                      <label className="flex items-start gap-3 mt-4 p-3 bg-white rounded-xl border border-orange-200 cursor-pointer hover:bg-orange-100/50 transition-colors">
+                        <div className="flex items-center h-5">
+                          <input type="checkbox" checked={editStudentForm.reset_pending} onChange={(e) => setEditStudentForm({...editStudentForm, reset_pending: e.target.checked})} className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500" />
+                        </div>
+                        <div className="text-sm">
+                          <span className="font-bold text-gray-900">Reset Pending Fees for New Academic Year</span>
+                          <p className="text-gray-500 text-xs mt-0.5">Check this if you are promoting the student. It sets their pending balance to: <span className="font-bold text-orange-800">(Previous Dues + Current Year Total)</span></p>
+                        </div>
+                      </label>
+                    </div>
+                    
+                    <div className="flex justify-between items-center pt-4 border-t border-gray-200">
+                      <button 
+                        type="button" 
+                        onClick={handleDeleteStudent}
+                        className="text-red-600 hover:text-red-800 font-bold px-4 py-2 rounded-lg hover:bg-red-50 transition-colors text-sm flex items-center gap-2"
+                      >
+                        <XCircle size={16} /> Delete Student Permanently
+                      </button>
+                      <button type="submit" disabled={isSubmittingEdit} className="bg-gradient-to-r from-edu-navy to-blue-900 text-white px-6 py-2.5 rounded-xl font-bold hover:shadow-lg transition-all disabled:opacity-50 flex items-center gap-2">
+                        {isSubmittingEdit ? <Loader2 size={18} className="animate-spin" /> : 'Save Changes'}
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                    
+                    {/* Academic Info */}
                   <div className="space-y-4">
                     <h3 className="font-bold text-gray-900 text-sm uppercase tracking-wider border-b border-gray-200 pb-2 flex items-center gap-2"><Book size={16} className="text-edu-gold" /> Academic Details</h3>
                     <div className="grid grid-cols-2 gap-4">
@@ -987,6 +1211,12 @@ const AdminDashboard = () => {
                         <p className="text-xs text-gray-500 mb-1">Total Fees</p>
                         <p className="font-bold text-2xl text-edu-navy">₹{(selectedStudentForCard.total_fees || 0).toLocaleString()}</p>
                       </div>
+                      {(selectedStudentForCard.previous_dues > 0) && (
+                        <div className="flex-1 bg-gradient-to-br from-orange-50 to-white p-4 rounded-xl border border-orange-100 shadow-sm">
+                          <p className="text-xs text-orange-600 mb-1">Previous Year Dues</p>
+                          <p className="font-bold text-2xl text-orange-700">₹{(selectedStudentForCard.previous_dues || 0).toLocaleString()}</p>
+                        </div>
+                      )}
                       <div className={`flex-1 p-4 rounded-xl border shadow-sm ${selectedStudentForCard.pending_fees > 0 ? 'bg-gradient-to-br from-red-50 to-white border-red-100' : 'bg-gradient-to-br from-green-50 to-white border-green-100'}`}>
                         <p className="text-xs text-gray-500 mb-1">Pending Balance</p>
                         <p className={`font-bold text-2xl ${selectedStudentForCard.pending_fees > 0 ? 'text-red-600' : 'text-green-600'}`}>
@@ -998,6 +1228,7 @@ const AdminDashboard = () => {
                   </div>
 
                 </div>
+                )}
               </div>
               
               <div className="p-4 sm:px-6 bg-gray-50 border-t border-gray-100 shrink-0 flex justify-end">
