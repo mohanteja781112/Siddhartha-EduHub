@@ -133,11 +133,40 @@ const ExamsManagement = () => {
     e.preventDefault();
     if (!selectedExam) return;
 
-      const questionToSave = { 
-        ...newQuestion, 
-        exam_id: selectedExam.id,
-        correct_option: newQuestion.correct_option.sort().join(',')
-      };
+    // Check for duplicate options (case-insensitive, trimmed)
+    const options = [
+      newQuestion.option_a.trim().toLowerCase(),
+      newQuestion.option_b.trim().toLowerCase(),
+      newQuestion.option_c.trim().toLowerCase(),
+      newQuestion.option_d.trim().toLowerCase()
+    ];
+    const uniqueOptions = new Set(options);
+    if (uniqueOptions.size !== options.length) {
+      alert("Error: Duplicate options detected. All options (A, B, C, D) must be unique.");
+      return;
+    }
+
+    // Check for duplicate question within the same exam (case-insensitive, trimmed)
+    const newQuestionText = newQuestion.question_text.trim().toLowerCase();
+    const isDuplicateQuestion = questions.some(
+      q => q.question_text.trim().toLowerCase() === newQuestionText
+    );
+    
+    if (isDuplicateQuestion) {
+      alert("Error: A question with this exact text already exists in this exam.");
+      return;
+    }
+
+    const questionToSave = { 
+      ...newQuestion, 
+      question_text: newQuestion.question_text.trim(),
+      option_a: newQuestion.option_a.trim(),
+      option_b: newQuestion.option_b.trim(),
+      option_c: newQuestion.option_c.trim(),
+      option_d: newQuestion.option_d.trim(),
+      exam_id: selectedExam.id,
+      correct_option: newQuestion.correct_option.sort().join(',')
+    };
 
       const { error } = await supabase
       .from('questions')

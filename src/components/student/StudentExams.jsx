@@ -19,6 +19,7 @@ const StudentExams = ({
   const answersRef = useRef({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
+  const timeLeftRef = useRef(0);
   const timerRef = useRef(null);
 
   const startExam = async (exam) => {
@@ -39,20 +40,22 @@ const StudentExams = ({
     answersRef.current = {};
     setIsSubmitting(false);
     setCurrentQuestionIndex(0);
-    setTimeLeft(exam.time_limit_minutes * 60);
+    
+    const initialTime = exam.time_limit_minutes * 60;
+    setTimeLeft(initialTime);
+    timeLeftRef.current = initialTime;
     setActiveTab('take_exam');
 
     // Start Timer
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev <= 1) {
-          clearInterval(timerRef.current);
-          submitExam(qData, answersRef.current, exam); // Auto submit with latest answers
-          return 0;
-        }
-        return prev - 1;
-      });
+      timeLeftRef.current -= 1;
+      setTimeLeft(timeLeftRef.current);
+      
+      if (timeLeftRef.current <= 0) {
+        clearInterval(timerRef.current);
+        submitExam(qData, answersRef.current, exam); // Auto submit with latest answers
+      }
     }, 1000);
   };
 

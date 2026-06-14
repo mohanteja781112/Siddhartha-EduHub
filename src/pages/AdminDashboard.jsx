@@ -29,7 +29,7 @@ const AdminDashboard = () => {
   useEffect(() => {
     const checkAdmin = async () => {
       const session = await getStudentSession();
-      if (!session || session.user.email !== 'admin@siddhartha.edu') {
+      if (!session || session.user.email !== 'admin16@siddhartha.edu') {
         navigate('/login?role=admin', { replace: true });
       } else {
         setAuthChecking(false);

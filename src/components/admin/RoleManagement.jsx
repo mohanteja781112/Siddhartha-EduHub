@@ -126,7 +126,7 @@ const RoleManagement = () => {
                   <td className="p-4">
                     <button
                       onClick={() => handleStatusChange(profile.id, profile.is_active === false ? true : false)}
-                      disabled={updatingRoleFor === profile.id || profile.email === 'admin@siddhartha.edu'}
+                      disabled={updatingRoleFor === profile.id || profile.email === 'admin16@siddhartha.edu'}
                       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50 ${profile.is_active !== false ? 'bg-green-500' : 'bg-gray-300'}`}
                     >
                       <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${profile.is_active !== false ? 'translate-x-6' : 'translate-x-1'}`} />
@@ -140,7 +140,7 @@ const RoleManagement = () => {
                       <select 
                         className="bg-white border border-gray-300 text-gray-700 text-sm rounded-lg focus:ring-edu-blue focus:border-edu-blue block p-2"
                         value={profile.role}
-                        disabled={updatingRoleFor === profile.id || profile.email === 'admin@siddhartha.edu'}
+                        disabled={updatingRoleFor === profile.id || profile.email === 'admin16@siddhartha.edu'}
                         onChange={(e) => handleRoleChange(profile.id, e.target.value)}
                       >
                         <option value="student">Student</option>
@@ -148,7 +148,7 @@ const RoleManagement = () => {
                         <option value="admin">Admin</option>
                       </select>
                       
-                      {profile.email !== 'admin@siddhartha.edu' && (
+                      {profile.email !== 'admin16@siddhartha.edu' && (
                         <button
                           onClick={() => handleDeleteProfile(profile.id)}
                           disabled={updatingRoleFor === profile.id}
@@ -160,7 +160,7 @@ const RoleManagement = () => {
                       )}
 
                       {updatingRoleFor === profile.id && <Loader2 className="animate-spin text-edu-blue" size={16} />}
-                      {profile.email === 'admin@siddhartha.edu' && <span className="text-xs text-gray-400 italic">Super Admin</span>}
+                      {profile.email === 'admin16@siddhartha.edu' && <span className="text-xs text-gray-400 italic">Super Admin</span>}
                     </div>
                   </td>
                 </tr>

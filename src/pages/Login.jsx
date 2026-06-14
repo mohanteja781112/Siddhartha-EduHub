@@ -33,7 +33,7 @@ const Login = () => {
             .eq('id', session.user.id)
             .single();
             
-          if (profile && profile.is_active === false && session.user.email !== 'admin@siddhartha.edu') {
+          if (profile && profile.is_active === false && session.user.email !== 'admin16@siddhartha.edu') {
             await logoutStudent();
             setExistingSession(null);
             setExistingRole(null);
@@ -43,7 +43,7 @@ const Login = () => {
           let currentRole = 'student';
           if (profile && profile.role) {
             currentRole = profile.role;
-          } else if (session.user.email === 'admin@siddhartha.edu') {
+          } else if (session.user.email === 'admin16@siddhartha.edu') {
             currentRole = 'admin';
           }
           
@@ -88,7 +88,7 @@ const Login = () => {
       await loginStudent(username, password);
       
       const { data: { session } } = await supabase.auth.getSession();
-      if (session && session.user.email !== 'admin@siddhartha.edu') {
+      if (session && session.user.email !== 'admin16@siddhartha.edu') {
         const { data: profile } = await supabase
           .from('profiles')
           .select('is_active')
@@ -246,7 +246,7 @@ const Login = () => {
                       <input
                         type="text" required value={username} onChange={(e) => setUsername(e.target.value)}
                         className="block w-full pl-12 pr-4 py-3.5 border border-gray-200 rounded-2xl bg-white/80 focus:bg-white focus:ring-4 focus:ring-edu-blue/10 focus:border-edu-blue transition-all duration-300 text-gray-900 font-medium placeholder:text-gray-400 placeholder:font-normal outline-none shadow-sm"
-                        placeholder={isServerAdmin ? "admin" : isTeacher ? "teacher@school.com" : "e.g. 1001"}
+                        placeholder={isServerAdmin ? "admin" : isTeacher ? "teacher@siddhartha.edu or teacher" : "e.g. 1001"}
                       />
                     </div>
                   </div>

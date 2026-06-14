@@ -17,12 +17,13 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 
 export const loginStudent = async (username, password) => {
   try {
+    const trimmedUsername = username.trim();
     // We map 'username' (which is actually Roll No) to an email format for Supabase Auth
-    // E.g. '1001' becomes '1001@siddhartha.edu', 'admin' becomes 'admin@siddhartha.edu'
-    // If the user already types the full email (e.g., 'teacher2@siddhartha.edu'), we use it as is.
-    const email = username.includes('@') 
-      ? username.toLowerCase() 
-      : `${username.toLowerCase()}@siddhartha.edu`;
+    // E.g. '1001' becomes '1001@siddhartha.edu', 'admin' becomes 'admin16@siddhartha.edu'
+    // If the user already types the full email (e.g., 'teacher@siddhartha.edu'), we use it as is.
+    const email = trimmedUsername.includes('@') 
+      ? trimmedUsername.toLowerCase() 
+      : `${trimmedUsername.toLowerCase()}@siddhartha.edu`;
     
     const { data, error } = await supabase.auth.signInWithPassword({
       email: email,
@@ -30,7 +31,7 @@ export const loginStudent = async (username, password) => {
     });
 
     if (error) {
-      throw new Error('Invalid Roll Number or Password');
+      throw new Error('Invalid ID or Password');
     }
     
     return data;
