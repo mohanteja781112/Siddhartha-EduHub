@@ -9,7 +9,13 @@ const TeacherDashboard = () => {
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchParams, setSearchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState('exams'); // 'exams' | 'marks'
+  const activeTab = searchParams.get('tab') || 'exams'; // 'exams' | 'marks'
+  const setActiveTab = (tab) => {
+    setSearchParams(prev => {
+      prev.set('tab', tab);
+      return prev;
+    }, { replace: true });
+  };
   const view = searchParams.get('view') || 'list';
   const [selectedExam, setSelectedExam] = useState(null);
 

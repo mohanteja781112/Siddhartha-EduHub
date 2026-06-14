@@ -71,7 +71,7 @@ const AboutUs = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-edu-gold/10 text-edu-gold font-semibold text-sm mb-6"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-edu-gold/10 text-edu-gold font-bold text-sm mb-6 shadow-[0_0_15px_rgba(251,212,109,0.5)] border border-edu-gold/30 backdrop-blur-sm"
           >
             <Trophy size={16} />
             <span>Excellence in Education</span>

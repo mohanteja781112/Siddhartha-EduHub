@@ -5,7 +5,6 @@ on:
     # Runs at 12:00 PM (UTC) every 5 days
     - cron: '0 12 */5 * *'
   workflow_dispatch: # Allows you to run it manually by clicking a button in GitHub
-1
 jobs:
   ping_database:
     runs-on: ubuntu-latest

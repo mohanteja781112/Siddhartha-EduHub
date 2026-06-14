@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   LogOut, User, BookOpen, GraduationCap, 
@@ -35,7 +35,15 @@ const StudentDashboard = () => {
   const [activeTerm, setActiveTerm] = useState('FA1');
   
   // Exams & Fees State
-  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'exams', 'take_exam', 'fees'
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'dashboard'; // 'dashboard', 'exams', 'take_exam', 'fees'
+  
+  const setActiveTab = (tab) => {
+    setSearchParams(prev => {
+      prev.set('tab', tab);
+      return prev;
+    }, { replace: true });
+  };
   const [feePayments, setFeePayments] = useState([]);
   const [availableExams, setAvailableExams] = useState([]);
   const [pastResults, setPastResults] = useState([]);
