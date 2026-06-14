@@ -242,6 +242,19 @@ export const toggleProfileStatus = async (profileId, isActive) => {
   }
 };
 
+export const deleteProfile = async (profileId) => {
+  try {
+    const { error } = await supabase.rpc('delete_admin_user', {
+      target_user_id: profileId
+    });
+    if (error) throw error;
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting profile:', error.message);
+    throw error;
+  }
+};
+
 export const updateStudentDetails = async (studentId, updates) => {
   try {
     const { data, error } = await supabase

@@ -4,13 +4,13 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   UploadCloud, FileText, CheckCircle, XCircle, 
   Users, AlertTriangle, ArrowRight, Loader2,
-  Wallet, Database, Search, Plus, Shield, Book, GraduationCap, Award, Lightbulb
+  Wallet, Database, Search, Plus, Shield, Book, GraduationCap, Award, Lightbulb, Trash2
 } from 'lucide-react';
 import Papa from 'papaparse';
 import { 
   adminBulkInsertStudents, getStudentSession, logoutStudent,
   getAdminFeesData, recordFeePayment, getStudentPayments,
-  getAllProfiles, updateProfileRole, getAllStudentsInfo, toggleProfileStatus, updateStudentDetails, bulkPromoteStudents, deleteStudent, bulkDeleteStudents
+  getAllProfiles, updateProfileRole, getAllStudentsInfo, toggleProfileStatus, updateStudentDetails, bulkPromoteStudents, deleteStudent, bulkDeleteStudents, deleteProfile
 } from '../lib/supabase';
 
 const AdminDashboard = () => {
@@ -122,6 +122,19 @@ const AdminDashboard = () => {
       setProfiles(prev => prev.map(p => p.id === profileId ? { ...p, is_active: isActive } : p));
     } catch (err) {
       alert("Error updating status: " + err.message);
+    } finally {
+      setUpdatingRoleFor(null);
+    }
+  };
+
+  const handleDeleteProfile = async (profileId) => {
+    if (!window.confirm("Are you sure you want to permanently delete this profile and their entire account?")) return;
+    setUpdatingRoleFor(profileId);
+    try {
+      await deleteProfile(profileId);
+      setProfiles(prev => prev.filter(p => p.id !== profileId));
+    } catch (err) {
+      alert("Error deleting profile: " + err.message);
     } finally {
       setUpdatingRoleFor(null);
     }
@@ -405,7 +418,7 @@ const AdminDashboard = () => {
               onClick={() => setActiveTab('import')}
               className={`py-2.5 px-6 font-bold text-sm transition-all rounded-xl flex items-center gap-2.5 ${activeTab === 'import' ? 'bg-gradient-to-r from-edu-navy to-blue-900 text-white shadow-premium' : 'text-gray-600 hover:text-edu-navy hover:bg-white hover:shadow-apple border border-transparent hover:border-white'}`}
             >
-              <Database size={18} /> Bulk Import
+              <Database size={18} /> Bulk Operations
             </button>
             <button
               onClick={() => setActiveTab('fees')}
@@ -583,7 +596,7 @@ const AdminDashboard = () => {
                     <Wallet size={20} />
                   </div>
                   <div>
-                    <h3 className="font-bold text-edu-navy text-lg">Student Fees Dashboard</h3>
+                    <h3 className="font-bold text-edu-navy text-lg">Student Fees Dashboard <span className="text-sm font-normal text-green-700 ml-2 bg-green-200/50 px-2 py-0.5 rounded-full">{filteredFeesData.length}</span></h3>
                     <p className="text-xs text-gray-500">View balances and add payments</p>
                   </div>
                 </div>
@@ -679,7 +692,7 @@ const AdminDashboard = () => {
                     <Shield size={20} />
                   </div>
                   <div>
-                    <h3 className="font-bold text-edu-navy text-lg">Staff Role Management</h3>
+                    <h3 className="font-bold text-edu-navy text-lg">Staff Role Management <span className="text-sm font-normal text-purple-700 ml-2 bg-purple-200/50 px-2 py-0.5 rounded-full">{profiles.filter(p => (p.email || '').toLowerCase().includes(rolesSearchQuery.toLowerCase())).length}</span></h3>
                     <p className="text-xs text-gray-500">Manage access levels for your staff</p>
                   </div>
                 </div>
@@ -708,7 +721,7 @@ const AdminDashboard = () => {
                         <th className="p-4 font-semibold border-b">Account Email</th>
                         <th className="p-4 font-semibold border-b">Current Role</th>
                         <th className="p-4 font-semibold border-b">Login Status</th>
-                        <th className="p-4 font-semibold border-b">Change Role</th>
+                        <th className="p-4 font-semibold border-b">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
@@ -752,6 +765,18 @@ const AdminDashboard = () => {
                                 <option value="teacher">Teacher</option>
                                 <option value="admin">Admin</option>
                               </select>
+                              
+                              {profile.email !== 'admin@siddhartha.edu' && (
+                                <button
+                                  onClick={() => handleDeleteProfile(profile.id)}
+                                  disabled={updatingRoleFor === profile.id}
+                                  className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                                  title="Delete Account Permanently"
+                                >
+                                  <Trash2 size={18} />
+                                </button>
+                              )}
+
                               {updatingRoleFor === profile.id && <Loader2 className="animate-spin text-edu-blue" size={16} />}
                               {profile.email === 'admin@siddhartha.edu' && <span className="text-xs text-gray-400 italic">Super Admin</span>}
                             </div>
@@ -783,7 +808,7 @@ const AdminDashboard = () => {
                     <Users size={20} />
                   </div>
                   <div>
-                    <h3 className="font-bold text-edu-navy text-lg">Student Directory</h3>
+                    <h3 className="font-bold text-edu-navy text-lg">Student Directory <span className="text-sm font-normal text-orange-700 ml-2 bg-orange-200/50 px-2 py-0.5 rounded-full">{filteredDirectoryData.length}</span></h3>
                     <p className="text-xs text-gray-500">View complete student profiles</p>
                   </div>
                 </div>
