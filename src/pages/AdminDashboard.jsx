@@ -53,6 +53,7 @@ const AdminDashboard = () => {
   const [profiles, setProfiles] = useState([]);
   const [isFetchingProfiles, setIsFetchingProfiles] = useState(false);
   const [updatingRoleFor, setUpdatingRoleFor] = useState(null);
+  const [rolesSearchQuery, setRolesSearchQuery] = useState('');
   
   // --- Student Directory State ---
   const [directoryData, setDirectoryData] = useState([]);
@@ -440,16 +441,16 @@ const AdminDashboard = () => {
               <div className="lg:col-span-1 space-y-6">
                 
                 {/* Mode Toggle */}
-                <div className="glass-card rounded-[2rem] p-2 flex flex-col sm:flex-row gap-2 bg-gray-100/50">
+                <div className="glass-card rounded-2xl p-2 flex flex-col sm:flex-row gap-2 bg-gray-100/50">
                   <button 
                     onClick={() => { setImportMode('promote'); setFile(null); setPreviewData([]); setErrorMessage(''); setUploadStatus(null); }}
-                    className={`flex-1 py-2 px-2 rounded-xl font-bold text-xs sm:text-sm transition-all ${importMode === 'promote' ? 'bg-white shadow-md text-edu-navy' : 'text-gray-500 hover:text-gray-700'}`}
+                    className={`flex-1 py-2 px-2 rounded-xl font-bold text-xs sm:text-sm transition-all ${importMode === 'promote' ? 'bg-gradient-to-r from-edu-navy to-blue-900 shadow-md text-white' : 'text-gray-500 hover:text-gray-700'}`}
                   >
                     Yearly Promotion
                   </button>
                   <button 
                     onClick={() => { setImportMode('delete'); setFile(null); setPreviewData([]); setErrorMessage(''); setUploadStatus(null); }}
-                    className={`flex-1 py-2 px-2 rounded-xl font-bold text-xs sm:text-sm transition-all ${importMode === 'delete' ? 'bg-red-50 shadow-md text-red-600 border border-red-100' : 'text-gray-500 hover:text-red-500'}`}
+                    className={`flex-1 py-2 px-2 rounded-xl font-bold text-xs sm:text-sm transition-all ${importMode === 'delete' ? 'bg-red-600 shadow-md text-white border border-red-700' : 'text-gray-500 hover:text-red-500'}`}
                   >
                     Bulk Delete
                   </button>
@@ -682,6 +683,17 @@ const AdminDashboard = () => {
                     <p className="text-xs text-gray-500">Manage access levels for your staff</p>
                   </div>
                 </div>
+                
+                <div className="relative w-full sm:w-64">
+                  <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input 
+                    type="text" 
+                    placeholder="Search by email..." 
+                    className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-edu-blue/50 text-sm"
+                    value={rolesSearchQuery}
+                    onChange={(e) => setRolesSearchQuery(e.target.value)}
+                  />
+                </div>
               </div>
 
               <div className="flex-1 overflow-auto p-0">
@@ -700,7 +712,11 @@ const AdminDashboard = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
-                      {profiles.map((profile) => (
+                      {profiles
+                        .filter(profile => 
+                          (profile.email || '').toLowerCase().includes(rolesSearchQuery.toLowerCase())
+                        )
+                        .map((profile) => (
                         <tr key={profile.id} className="hover:bg-gray-50 transition-colors">
                           <td className="p-4 font-bold text-edu-navy">{profile.email || <span className="text-gray-400 italic">No email linked</span>}</td>
                           <td className="p-4">
@@ -742,9 +758,9 @@ const AdminDashboard = () => {
                           </td>
                         </tr>
                       ))}
-                      {profiles.length === 0 && (
+                      {profiles.filter(profile => (profile.email || '').toLowerCase().includes(rolesSearchQuery.toLowerCase())).length === 0 && (
                         <tr>
-                          <td colSpan="3" className="p-8 text-center text-gray-500">No profiles found.</td>
+                          <td colSpan="4" className="p-8 text-center text-gray-500">No profiles found matching your search.</td>
                         </tr>
                       )}
                     </tbody>
