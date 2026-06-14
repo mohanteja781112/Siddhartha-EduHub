@@ -15,7 +15,7 @@ dist-ssr
 
 # Editor directories and files
 .vscode/*
-!.vscode/extensions.json1
+!.vscode/extensions.json
 .idea
 .DS_Store
 *.suo
@@ -26,9 +26,9 @@ dist-ssr
 
 data/
 scripts/
+import_auth.js
 *.csv
 test_supabase.js
-supabase__setup.sql
 # Environment variables
 .env
 .env.*
