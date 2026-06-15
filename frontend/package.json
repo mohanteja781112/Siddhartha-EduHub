@@ -17,7 +17,8 @@
     "papaparse": "^5.5.3",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "react-router-dom": "^7.16.0"
+    "react-router-dom": "^7.16.0",
+    "siddhartha-eduhub-root": "file:.."
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

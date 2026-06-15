@@ -26,9 +26,7 @@ dist-ssr
 
 data/
 scripts/
-import_auth.js
 *.csv
-test_supabase.js
 # Environment variables
 .env
 .env.*

@@ -2,8 +2,8 @@ name: Supabase Keep-Alive Ping
 
 on:
   schedule:
-    # Runs at 12:00 PM (UTC) every 5 days
-    - cron: '0 12 */5 * *'
+    # Runs at 12:00 PM (UTC) every 6 days
+    - cron: '0 12 */6 * *'
   workflow_dispatch: # Allows you to run it manually by clicking a button in GitHub
 jobs:
   ping_database:

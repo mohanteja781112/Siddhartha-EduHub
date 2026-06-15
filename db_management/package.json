@@ -1,0 +1,17 @@
+{
+  "name": "siddhartha-eduhub-backend",
+  "version": "1.0.0",
+  "description": "Backend scripts and data for Siddhartha EduHub",
+  "type": "module",
+  "scripts": {
+    "start": "node scripts/index.js",
+    "seed": "node scripts/create_dummies.js",
+    "change-password": "node scripts/change_password.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.106.2",
+    "dotenv": "^17.4.2",
+    "papaparse": "^5.5.3",
+    "siddhartha-eduhub-root": "file:.."
+  }
+}
