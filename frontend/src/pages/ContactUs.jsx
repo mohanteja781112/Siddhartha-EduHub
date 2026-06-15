@@ -96,7 +96,7 @@ const ContactUs = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#FCFAF8] pt-[72px] font-sans pb-0">
+    <div className="min-h-screen bg-[#FCFAF8] pt-[80px] font-sans pb-0 overflow-x-hidden">
       {/* Hero Banner Section */}
       <section className="relative bg-gradient-to-br from-blue-50 via-white to-blue-50 py-20 overflow-hidden border-b border-edu-navy/5">
         {/* Decorative Background Elements (5-10% opacity) */}

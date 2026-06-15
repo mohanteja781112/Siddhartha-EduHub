@@ -174,7 +174,7 @@ const Admission = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#FCFAF8] pt-[72px] font-sans pb-20">
+    <div className="min-h-screen bg-[#FCFAF8] pt-[80px] font-sans pb-20 overflow-x-hidden">
       
       {/* Hero Banner Section */}
       <section className="relative bg-gradient-to-br from-edu-navy to-[#0a3d5e] py-20 overflow-hidden">
