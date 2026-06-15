@@ -280,7 +280,7 @@ const AboutUs = () => {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent lg:hidden"></div>
                 <div className="absolute bottom-6 left-6 lg:hidden text-white">
                   <h4 className="text-xl font-bold font-poppins">Dr. Adari Jaya sankar</h4>
-                  <p className="text-white/80 text-sm">Principal, Siddhartha EduHub</p>
+                  <p className="text-white/80 text-sm">Correspondent, Siddhartha EduHub</p>
                 </div>
               </div>
               <div className="lg:col-span-3 p-10 md:p-16 flex flex-col justify-center">
@@ -288,7 +288,7 @@ const AboutUs = () => {
                   <div className="w-12 h-12 bg-edu-gold/10 rounded-full flex items-center justify-center shrink-0 text-edu-gold">
                     <PenTool size={24} />
                   </div>
-                  <h3 className="text-2xl md:text-3xl font-poppins font-bold text-edu-navy">Message from the Principal</h3>
+                  <h3 className="text-2xl md:text-3xl font-poppins font-bold text-edu-navy">Message from the Correspondent</h3>
                 </div>
                 <div className="space-y-4 text-gray-600 italic leading-relaxed mb-8">
                   <p>
@@ -300,7 +300,7 @@ const AboutUs = () => {
                 </div>
                 <div className="hidden lg:block">
                   <h4 className="text-lg font-bold font-poppins text-edu-navy">Mr. Adari Jaya Sankar</h4>
-                  <p className="text-gray-500 text-sm">Principal, Siddhartha EduHub</p>
+                  <p className="text-gray-500 text-sm">Correspondent, Siddhartha EduHub</p>
                 </div>
               </div>
             </div>
