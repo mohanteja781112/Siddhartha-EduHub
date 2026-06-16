@@ -138,7 +138,7 @@ const ContactUs = () => {
             {
               icon: Phone,
               title: "Call Us",
-              lines: ["+91 90301 82586", "+91 8121996757"]
+              lines: ["+91 90301 82586", "+91 81219 96757"]
             },
             {
               icon: Mail,
@@ -191,7 +191,7 @@ const ContactUs = () => {
                 <div>
                   <h4 className="font-semibold text-edu-navy mb-1">Phone:</h4>
                   <p>+91 90301 82586</p>
-                  <p>+91 8121996757</p>
+                  <p>+91 81219 96757</p>
                 </div>
                 <div>
                   <h4 className="font-semibold text-edu-navy mb-1">Email:</h4>
