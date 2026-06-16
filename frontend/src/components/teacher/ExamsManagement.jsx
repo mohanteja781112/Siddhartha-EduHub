@@ -16,7 +16,7 @@ const ExamsManagement = () => {
   
   // New Question Form State
   const [newQuestion, setNewQuestion] = useState({
-    question_text: '', option_a: '', option_b: '', option_c: '', option_d: '', correct_option: ['A'], marks: 1
+    question_text: '', option_a: '', option_b: '', option_c: '', option_d: '', correct_option: [], marks: 1
   });
   const [questions, setQuestions] = useState([]);
   const [results, setResults] = useState([]);
@@ -133,6 +133,11 @@ const ExamsManagement = () => {
     e.preventDefault();
     if (!selectedExam) return;
 
+    if (newQuestion.correct_option.length === 0) {
+      alert("Error: Please select at least one correct option (A, B, C, or D).");
+      return;
+    }
+
     // Check for duplicate options (case-insensitive, trimmed)
     const options = [
       newQuestion.option_a.trim().toLowerCase(),
@@ -176,7 +181,7 @@ const ExamsManagement = () => {
       alert('Error adding question: ' + error.message);
     } else {
       alert('Question added!');
-      setNewQuestion({ question_text: '', option_a: '', option_b: '', option_c: '', option_d: '', correct_option: ['A'], marks: 1 });
+      setNewQuestion({ question_text: '', option_a: '', option_b: '', option_c: '', option_d: '', correct_option: [], marks: 1 });
       fetchQuestions(selectedExam.id);
     }
   };
@@ -315,9 +320,7 @@ const ExamsManagement = () => {
                           const newOptions = e.target.checked 
                             ? [...newQuestion.correct_option, opt]
                             : newQuestion.correct_option.filter(o => o !== opt);
-                          if (newOptions.length > 0) {
-                            setNewQuestion({...newQuestion, correct_option: newOptions});
-                          }
+                          setNewQuestion({...newQuestion, correct_option: newOptions});
                         }}
                       />
                       <span className="font-semibold text-gray-700">Option {opt}</span>
