@@ -19,6 +19,7 @@ const StudentExams = ({
   const answersRef = useRef({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
+  const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const timeLeftRef = useRef(0);
   const timerRef = useRef(null);
 
@@ -62,6 +63,7 @@ const StudentExams = ({
   const submitExam = async (currentQuestions = questions, currentAnswers = answers, exam = currentExam) => {
     if (isSubmitting) return;
     setIsSubmitting(true);
+    setShowSubmitConfirm(false);
     
     if (timerRef.current) clearInterval(timerRef.current);
     
@@ -208,11 +210,7 @@ const StudentExams = ({
 
           {currentQuestionIndex === questions.length - 1 ? (
             <button
-              onClick={() => {
-                if (window.confirm("Are you sure you want to submit your exam? You cannot change your answers after this.")) {
-                  submitExam();
-                }
-              }}
+              onClick={() => setShowSubmitConfirm(true)}
               disabled={isSubmitting}
               className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-8 py-3 bg-green-500 text-white rounded-xl font-bold hover:bg-green-600 transition-colors shadow-md disabled:opacity-50"
             >
@@ -240,6 +238,36 @@ const StudentExams = ({
             />
           ))}
         </div>
+
+        {/* Custom Submit Confirmation Modal */}
+        {showSubmitConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border border-gray-100"
+            >
+              <h3 className="text-2xl font-bold text-gray-900 mb-2 font-outfit">Submit Exam?</h3>
+              <p className="text-gray-600 mb-8">
+                Are you sure you want to submit your exam? You will not be able to change your answers after this point.
+              </p>
+              <div className="flex gap-4">
+                <button 
+                  onClick={() => setShowSubmitConfirm(false)}
+                  className="flex-1 py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => submitExam()}
+                  className="flex-1 py-3 px-4 bg-green-500 hover:bg-green-600 text-white font-bold rounded-xl transition-colors shadow-lg shadow-green-500/30"
+                >
+                  Yes, Submit
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
 
       </div>
     );
