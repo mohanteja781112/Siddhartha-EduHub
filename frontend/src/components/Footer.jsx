@@ -57,9 +57,12 @@ const Footer = () => {
                 <MapPin className="w-5 h-5 text-edu-gold shrink-0 mt-0.5" />
                 <span>Siddhartha e-Techno School,<br />Anakapalle, Andhra Pradesh, India</span>
               </li>
-              <li className="flex items-center gap-3">
-                <Phone className="w-5 h-5 text-edu-gold shrink-0" />
-                <span>+91 90301 82586</span>
+              <li className="flex items-start gap-3">
+                <Phone className="w-5 h-5 text-edu-gold shrink-0 mt-0.5" />
+                <div className="flex flex-col">
+                  <span>+91 90301 82586</span>
+                  <span>+91 8121996757</span>
+                </div>
               </li>
               <li className="flex items-center gap-3">
                 <Mail className="w-5 h-5 text-edu-gold shrink-0" />
