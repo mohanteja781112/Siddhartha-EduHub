@@ -208,7 +208,11 @@ const StudentExams = ({
 
           {currentQuestionIndex === questions.length - 1 ? (
             <button
-              onClick={() => submitExam()}
+              onClick={() => {
+                if (window.confirm("Are you sure you want to submit your exam? You cannot change your answers after this.")) {
+                  submitExam();
+                }
+              }}
               disabled={isSubmitting}
               className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-8 py-3 bg-green-500 text-white rounded-xl font-bold hover:bg-green-600 transition-colors shadow-md disabled:opacity-50"
             >
