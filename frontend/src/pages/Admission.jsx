@@ -14,7 +14,7 @@ const InputField = ({ label, name, type = "text", value, onChange, error, requir
     </label>
     <div className="relative">
       {Icon && (
-        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
           <Icon size={18} />
         </div>
       )}
@@ -23,8 +23,13 @@ const InputField = ({ label, name, type = "text", value, onChange, error, requir
         name={name}
         value={value}
         onChange={onChange}
+        onClick={(e) => {
+          if (type === 'date' && e.target.showPicker) {
+            e.target.showPicker();
+          }
+        }}
         placeholder={placeholder}
-        className={`w-full bg-white/50 border ${error ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-200 focus:border-edu-gold focus:ring-edu-gold/20'} rounded-xl px-4 py-3 ${Icon ? 'pl-11' : ''} text-edu-navy placeholder:text-gray-400 focus:outline-none focus:ring-4 transition-all duration-300`}
+        className={`w-full bg-white/50 border ${error ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-200 focus:border-edu-gold focus:ring-edu-gold/20'} rounded-xl px-4 py-3 ${Icon ? 'pl-11' : ''} text-edu-navy placeholder:text-gray-400 focus:outline-none focus:ring-4 transition-all duration-300 ${type === 'date' ? 'cursor-pointer' : ''}`}
       />
     </div>
     {error && (
