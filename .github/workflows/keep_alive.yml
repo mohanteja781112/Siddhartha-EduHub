@@ -12,8 +12,13 @@ jobs:
       - name: Ping Supabase REST API
         run: |
           echo "Pinging Supabase to prevent auto-pause..."
-          curl -sS --request GET \
+          echo "Checking if URL secret is present..."
+          if [ -z "${{ secrets.SUPABASE_URL }}" ]; then
+            echo "Error: SUPABASE_URL secret is empty!"
+            exit 1
+          fi
+          curl -sS -v --request GET \
             --url "${{ secrets.SUPABASE_URL }}/rest/v1/profiles?select=id&limit=1" \
             --header "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
-            --header "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" > /dev/null
-          echo "Ping successful! Database activity registered."
+            --header "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}"
+          echo -e "\n\nPing successful! Database activity registered."
